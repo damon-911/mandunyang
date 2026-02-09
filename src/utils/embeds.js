@@ -24,6 +24,10 @@ export function gameEmbed(title, fields = []) {
     .setTitle(title)
     .setTimestamp();
 
-  fields.forEach((f) => embed.addFields(f));
+  const SPACER = { name: "\u200B", value: "\u200B", inline: false };
+  fields.forEach((f, idx) => {
+    embed.addFields(f);
+    if (idx < fields.length - 1) embed.addFields(SPACER);
+  });
   return embed;
 }

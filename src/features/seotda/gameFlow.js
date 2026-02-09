@@ -113,8 +113,8 @@ export function buildActiveGameMessage(game) {
   const p1Label = getPlayerLabel(ids[0]);
   const p2Label = game.botId ? "만두냥" : getPlayerLabel(ids[1]);
   const vsText = game.botId
-    ? `${p1Label} vs 만두냥\n\u200B\n`
-    : `${p1Label} vs ${p2Label}\n\u200B\n`;
+    ? `${p1Label} vs 만두냥`
+    : `${p1Label} vs ${p2Label}`;
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -134,7 +134,7 @@ export function buildActiveGameMessage(game) {
         {
           name: "진행 방법",
           value:
-            "• **패 확인**: 본인에게만 패 공개\n\u200B\n" +
+            "• **패 확인**: 본인에게만 패 공개" +
             "• **승부 보기**: 패 공개 후 결과 확인",
         },
       ]),
@@ -148,7 +148,7 @@ export function buildHandEmbed(player) {
   const c2 = formatCard(player.hand[1]);
 
   return gameEmbed("🃏 내 패", [
-    { name: "카드", value: `${c1}, ${c2}\n\u200B\n` },
+    { name: "카드", value: `${c1}, ${c2}` },
     { name: "패", value: `**${player.rank.name}**` },
   ]);
 }
@@ -172,13 +172,13 @@ export function buildResultUpdatePayload(game) {
       gameEmbed("🎴 섯다 결과", [
         {
           name: pA.label,
-          value: `${formatCard(pA.hand[0])}, ${formatCard(pA.hand[1])}\n→ **${pA.rank.name}**\n\u200B\n`,
-          inline: true,
+          value: `${formatCard(pA.hand[0])}, ${formatCard(pA.hand[1])}\n→ **${pA.rank.name}**`,
+          inline: false,
         },
         {
           name: pB.label,
-          value: `${formatCard(pB.hand[0])}, ${formatCard(pB.hand[1])}\n→ **${pB.rank.name}**\n\u200B\n`,
-          inline: true,
+          value: `${formatCard(pB.hand[0])}, ${formatCard(pB.hand[1])}\n→ **${pB.rank.name}**`,
+          inline: false,
         },
         { name: "결과", value: result },
       ]),

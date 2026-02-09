@@ -52,13 +52,13 @@ export async function handleCommand(interaction, ctx) {
           gameEmbed("📅 출석체크 완료!", [
             {
               name: "획득",
-              value: `${formatMoney(DAILY_REWARD)}원\n\u200B\n`,
-              inline: true,
+              value: `${formatMoney(DAILY_REWARD)}원`,
+              inline: false,
             },
             {
               name: "현재 보유금",
-              value: `${formatMoney(user.balance)}원\n\u200B\n`,
-              inline: true,
+              value: `${formatMoney(user.balance)}원`,
+              inline: false,
             },
             { name: "출석 날짜", value: today },
           ]),
@@ -80,13 +80,13 @@ export async function handleCommand(interaction, ctx) {
           gameEmbed("👤 내 정보", [
             {
               name: "보유금",
-              value: `${formatMoney(user.balance)}원\n\u200B\n`,
-              inline: true,
+              value: `${formatMoney(user.balance)}원`,
+              inline: false,
             },
             {
               name: "마지막 출석",
               value: lastAttendance ?? "없음",
-              inline: true,
+              inline: false,
             },
           ]),
         ],
