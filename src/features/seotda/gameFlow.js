@@ -134,7 +134,7 @@ export function buildActiveGameMessage(game) {
         {
           name: "진행 방법",
           value:
-            "• **패 확인**: 본인에게만 패 공개" +
+            "• **패 확인**: 본인에게만 패 공개\n" +
             "• **승부 보기**: 패 공개 후 결과 확인",
         },
       ]),
@@ -171,13 +171,17 @@ export function buildResultUpdatePayload(game) {
     embeds: [
       gameEmbed("🎴 섯다 결과", [
         {
-          name: pA.label,
-          value: `${formatCard(pA.hand[0])}, ${formatCard(pA.hand[1])}\n→ **${pA.rank.name}**`,
+          name: "플레이어 1",
+          value: `${pA.label}\n${formatCard(pA.hand[0])}, ${formatCard(
+            pA.hand[1],
+          )}\n→ **${pA.rank.name}**`,
           inline: false,
         },
         {
-          name: pB.label,
-          value: `${formatCard(pB.hand[0])}, ${formatCard(pB.hand[1])}\n→ **${pB.rank.name}**`,
+          name: "플레이어 2",
+          value: `${pB.label}\n${formatCard(pB.hand[0])}, ${formatCard(
+            pB.hand[1],
+          )}\n→ **${pB.rank.name}**`,
           inline: false,
         },
         { name: "결과", value: result },
