@@ -11,6 +11,8 @@ import {
   buildPendingMessage,
 } from "../features/seotda/gameFlow.js";
 
+const formatMoney = (amount) => Number(amount ?? 0).toLocaleString("ko-KR");
+
 function setGameExpiry(games, gameId, ms = 10 * 60 * 1000) {
   setTimeout(() => {
     const g = games.get(gameId);
@@ -29,7 +31,8 @@ export async function handleCommand(interaction, ctx) {
 
     case "출석체크": {
       const userId = interaction.user.id;
-      const today = getKstDateString(); // KST 기준 YYYY-MM-DD
+      const today = getKstDateString();
+      const DAILY_REWARD = 10000;
 
       if (!(await canAttend(userId, today))) {
         const user = await getUser(userId);
@@ -38,22 +41,26 @@ export async function handleCommand(interaction, ctx) {
           embeds: [
             errorEmbed(
               "이미 출석했어!",
-              `오늘은 이미 출석체크를 했어 😼\n\n현재 보유금: **${user.balance.toLocaleString()}원**`,
+              `오늘은 이미 출석체크를 했어 😼\n\n현재 보유금: **${formatMoney(user.balance)}원**`,
             ),
           ],
         });
         return;
       }
 
-      const user = await attend(userId, today, 10000);
+      const user = await attend(userId, today, DAILY_REWARD);
 
       await interaction.reply({
         embeds: [
           gameEmbed("📅 출석체크 완료!", [
-            { name: "획득", value: `10,000원`, inline: true },
+            {
+              name: "획득",
+              value: `${formatMoney(DAILY_REWARD)}원`,
+              inline: true,
+            },
             {
               name: "현재 보유금",
-              value: `${user.balance.toLocaleString()}원`,
+              value: `${formatMoney(user.balance)}원`,
               inline: true,
             },
             { name: "출석 날짜", value: today },
@@ -76,7 +83,7 @@ export async function handleCommand(interaction, ctx) {
           gameEmbed("👤 내 정보", [
             {
               name: "보유금",
-              value: `${user.balance.toLocaleString()}원`,
+              value: `${formatMoney(user.balance)}원`,
               inline: true,
             },
             {
@@ -118,6 +125,12 @@ export async function handleCommand(interaction, ctx) {
         challengerId: interaction.user.id,
         opponentId: opponent ? opponent.id : null,
       });
+      game.playerLabels[interaction.user.id] =
+        interaction.member?.displayName ?? interaction.user.username;
+      if (opponent) {
+        game.playerLabels[opponent.id] =
+          opponent.globalName ?? opponent.username;
+      }
 
       // 솔로면 즉시 시작
       if (!opponent) {
