@@ -10,6 +10,7 @@ import {
 import { randomUUID } from 'crypto';
 import { createDeck, shuffle, draw, formatCard } from './seotda/cards.js';
 import { getHandRank, compareHands } from './seotda/rank.js';
+import { infoEmbed, errorEmbed, gameEmbed } from './utils/embeds.js';
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds],
@@ -35,6 +36,7 @@ game = {
 
 function buildActiveGameMessage(game) {
   const ids = Object.keys(game.players).filter((id) => id !== 'AI');
+
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`seotda_check:${game.id}`)
@@ -46,12 +48,22 @@ function buildActiveGameMessage(game) {
       .setStyle(ButtonStyle.Success),
   );
 
+  const vsText = game.botId
+    ? `<@${ids[0]}> vs 만두냥`
+    : `<@${ids[0]}> vs <@${ids[1]}>`;
+
   return {
-    content:
-      `🎴 **섯다 시작!**\n` +
-      `대결: ${game.botId ? `<@${ids[0]}> vs 만두냥` : `<@${ids[0]}> vs <@${ids[1]}>`}\n\n` +
-      `- **패 확인**: 본인에게만 패를 보여줘요.\n` +
-      `- **승부 보기**: 패를 공개하고 결과를 냅니다.`,
+    embeds: [
+      gameEmbed('🎴 섯다 시작!', [
+        { name: '대결', value: vsText },
+        {
+          name: '진행 방법',
+          value:
+            '• **패 확인**: 본인에게만 패 공개\n' +
+            '• **승부 보기**: 패 공개 후 결과 확인',
+        },
+      ]),
+    ],
     components: [row],
   };
 }
@@ -69,10 +81,18 @@ function buildPendingMessage(game) {
   );
 
   return {
-    content:
-      `🎴 **섯다 대결 신청!**\n` +
-      `<@${game.challengerId}> 님이 <@${game.opponentId}> 님에게 대결을 신청했어요.\n\n` +
-      `👉 <@${game.opponentId}> 님이 **수락/거절**을 눌러주세요.`,
+    embeds: [
+      gameEmbed('🎴 섯다 대결 신청!', [
+        {
+          name: '대결',
+          value: `<@${game.challengerId}> vs <@${game.opponentId}>`,
+        },
+        {
+          name: '안내',
+          value: `👉 <@${game.opponentId}> 님이 **수락/거절**을 눌러주세요.`,
+        },
+      ]),
+    ],
     components: [row],
   };
 }
@@ -147,7 +167,9 @@ client.on('interactionCreate', async (interaction) => {
     // 1) Slash commands
     if (interaction.isChatInputCommand()) {
       if (interaction.commandName === '핑') {
-        await interaction.reply('퐁! 🏓');
+        await interaction.reply({
+          embeds: [infoEmbed('핑', '퐁! 🏓')],
+        });
         return;
       }
 
@@ -156,13 +178,19 @@ client.on('interactionCreate', async (interaction) => {
 
         // 자기 자신 태그 방지
         if (opponent && opponent.id === interaction.user.id) {
-          await interaction.reply({ content: '자기 자신과는 대결할 수 없어 😅', ephemeral: true });
+          await interaction.reply({
+            ephemeral: true,
+            embeds: [errorEmbed('잘못된 대결', '자기 자신과는 대결할 수 없어 😅')],
+          });
           return;
         }
 
         // 봇 태그 방지(옵션 없이 쓰면 만두냥과 대결)
         if (opponent && opponent.bot) {
-          await interaction.reply({ content: '봇이 아닌 사람을 태그해줘! (옵션 없이 쓰면 만두냥과 대결해)', ephemeral: true });
+          await interaction.reply({
+            ephemeral: true,
+            embeds: [errorEmbed('잘못된 상대', '봇이 아닌 사람을 태그해줘!')],
+          });
           return;
         }
 
@@ -213,24 +241,36 @@ client.on('interactionCreate', async (interaction) => {
 
       const game = games.get(gameId);
       if (!game || game.ended) {
-        await interaction.reply({ content: '이 게임은 이미 끝났거나 만료됐어 😿', ephemeral: true });
+        await interaction.reply({
+          ephemeral: true,
+          embeds: [errorEmbed('만료됨', '이 게임은 이미 끝났거나 만료됐어 😿')],
+        });
         return;
       }
 
       // 채널 고정
       if (interaction.channelId !== game.channelId) {
-        await interaction.reply({ content: '이 게임이 시작된 채널에서만 조작할 수 있어!', ephemeral: true });
+        await interaction.reply({
+          ephemeral: true,
+          embeds: [errorEmbed('조작 불가', '이 게임이 시작된 채널에서만 조작할 수 있어!')],
+        });
         return;
       }
 
       // --- 수락/거절 단계 ---
       if (action === 'seotda_accept') {
         if (game.state !== 'pending') {
-          await interaction.reply({ content: '이미 진행 중이거나 종료된 요청이야!', ephemeral: true });
+          await interaction.reply({
+            ephemeral: true,
+            embeds: [errorEmbed('요청 불가', '이미 진행 중이거나 종료된 요청이야!')],
+          });
           return;
         }
         if (interaction.user.id !== game.opponentId) {
-          await interaction.reply({ content: '상대만 수락할 수 있어!', ephemeral: true });
+          await interaction.reply({
+            ephemeral: true,
+            embeds: [errorEmbed('권한 없음', '상대만 수락할 수 있어!')],
+          });
           return;
         }
 
@@ -244,11 +284,17 @@ client.on('interactionCreate', async (interaction) => {
 
       if (action === 'seotda_decline') {
         if (game.state !== 'pending') {
-          await interaction.reply({ content: '이미 진행 중이거나 종료된 요청이야!', ephemeral: true });
+          await interaction.reply({
+            ephemeral: true,
+            embeds: [errorEmbed('요청 불가', '이미 진행 중이거나 종료된 요청이야!')],
+          });
           return;
         }
         if (interaction.user.id !== game.opponentId) {
-          await interaction.reply({ content: '상대만 거절할 수 있어!', ephemeral: true });
+          await interaction.reply({
+            ephemeral: true,
+            embeds: [errorEmbed('권한 없음', '상대만 거절할 수 있어!')],
+          });
           return;
         }
 
@@ -256,7 +302,9 @@ client.on('interactionCreate', async (interaction) => {
         games.delete(gameId);
 
         await interaction.update({
-          content: `😿 <@${game.opponentId}> 님이 대결을 거절했어요.`,
+          embeds: [
+            infoEmbed('대결 거절', `😿 <@${game.opponentId}> 님이 대결을 거절했어요.`),
+          ],
           components: [],
         });
         return;
@@ -264,14 +312,20 @@ client.on('interactionCreate', async (interaction) => {
 
       // --- 진행 단계(패 확인/승부 보기) ---
       if (game.state !== 'active') {
-        await interaction.reply({ content: '아직 수락 대기 중이야!', ephemeral: true });
+        await interaction.reply({
+          ephemeral: true,
+          embeds: [errorEmbed('대기 중', '아직 수락 대기 중이야!')],
+        });
         return;
       }
 
       // 참가자만 조작 가능
       const player = safeGetPlayer(game, interaction.user.id);
       if (!player) {
-        await interaction.reply({ content: '이 게임 참가자만 누를 수 있어!', ephemeral: true });
+        await interaction.reply({
+          ephemeral: true,
+          embeds: [errorEmbed('권한 없음', '이 게임 참가자만 누를 수 있어!')],
+        });
         return;
       }
 
@@ -283,10 +337,12 @@ client.on('interactionCreate', async (interaction) => {
 
         await interaction.reply({
           ephemeral: true,
-          content:
-            `🃏 **너의 패**\n` +
-            `${c1}, ${c2}\n` +
-            `→ **${player.rank.name}**`,
+          embeds: [
+            gameEmbed('🃏 내 패', [
+              { name: '카드', value: `${c1}, ${c2}` },
+              { name: '패', value: `**${player.rank.name}**` },
+            ]),
+          ],
         });
         return;
       }
@@ -294,10 +350,15 @@ client.on('interactionCreate', async (interaction) => {
       if (action === 'seotda_show') {
         // 사람 vs 사람일 때: 둘 다 패 확인 후 승부 보기 (긴장감↑)
         if (!game.botId) {
-          const ids = Object.keys(game.players).filter(id => id !== 'AI');
-          const allChecked = ids.every(id => game.players[id]?.checked);
+          const ids = Object.keys(game.players).filter((id) => id !== 'AI');
+          const allChecked = ids.every((id) => game.players[id]?.checked);
           if (!allChecked) {
-            await interaction.reply({ content: '두 사람 모두 **패 확인**을 누른 뒤에 승부를 볼 수 있어!', ephemeral: true });
+            await interaction.reply({
+              ephemeral: true,
+              embeds: [
+                errorEmbed('아직 안 돼!', '두 사람 모두 **패 확인**을 누른 뒤에 승부를 볼 수 있어!'),
+              ],
+            });
             return;
           }
         }
@@ -309,19 +370,33 @@ client.on('interactionCreate', async (interaction) => {
         const cmp = compareHands(pA.rank, pB.rank);
         const result =
           cmp > 0 ? `🏆 승자: ${pA.label}`
-          : cmp < 0 ? `🏆 승자: ${pB.label}`
-          : `🤝 무승부!`;
+            : cmp < 0 ? `🏆 승자: ${pB.label}`
+              : `🤝 무승부!`;
 
         game.ended = true;
         games.delete(gameId);
 
         await interaction.update({
           components: [],
-          content:
-            `🎴 **섯다 결과**\n\n` +
-            `${pA.label}: ${formatCard(pA.hand[0])}, ${formatCard(pA.hand[1])} → **${pA.rank.name}**\n` +
-            `${pB.label}: ${formatCard(pB.hand[0])}, ${formatCard(pB.hand[1])} → **${pB.rank.name}**\n\n` +
-            `${result}`,
+          embeds: [
+            gameEmbed('🎴 섯다 결과', [
+              {
+                name: pA.label,
+                value:
+                  `${formatCard(pA.hand[0])}, ${formatCard(pA.hand[1])}\n` +
+                  `→ **${pA.rank.name}**`,
+                inline: true,
+              },
+              {
+                name: pB.label,
+                value:
+                  `${formatCard(pB.hand[0])}, ${formatCard(pB.hand[1])}\n` +
+                  `→ **${pB.rank.name}**`,
+                inline: true,
+              },
+              { name: '결과', value: result },
+            ]),
+          ],
         });
         return;
       }
@@ -330,9 +405,12 @@ client.on('interactionCreate', async (interaction) => {
     console.error(err);
     try {
       if (interaction.isRepliable()) {
-        await interaction.reply({ content: '😿 에러가 났다냥!', ephemeral: true });
+        await interaction.reply({
+          ephemeral: true,
+          embeds: [errorEmbed('에러', '😿 에러가 났다냥!')],
+        });
       }
-    } catch {}
+    } catch { }
   }
 });
 
