@@ -9,12 +9,22 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName('섯다')
-    .setDescription('섯다 게임 (상대 없으면 만두냥과 대결)')
+    .setDescription('섯다 게임')
     .addUserOption(opt =>
       opt.setName('상대')
-        .setDescription('대결할 서버 사람을 태그')
+        .setDescription('대결할 사람을 태그')
         .setRequired(false)
     )
+    .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName('출석체크')
+    .setDescription('하루 한 번 출석하고 10,000원 받기')
+    .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName('내정보')
+    .setDescription('내 게임머니/출석 정보 확인')
     .toJSON(),
 ];
 
