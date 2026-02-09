@@ -84,6 +84,11 @@ export async function handleCommand(interaction, ctx) {
               inline: false,
             },
             {
+              name: "",
+              value: "",
+              inline: false,
+            },
+            {
               name: "마지막 출석",
               value: lastAttendance ?? "없음",
               inline: false,
@@ -115,6 +120,8 @@ export async function handleCommand(interaction, ctx) {
         return;
       }
 
+      await interaction.deferReply();
+
       const gameId = randomUUID();
       const game = createGame({
         id: gameId,
@@ -129,7 +136,7 @@ export async function handleCommand(interaction, ctx) {
         games.set(gameId, game);
         setGameExpiry(games, gameId);
 
-        await interaction.reply(buildActiveGameMessage(game));
+        await interaction.editReply(buildActiveGameMessage(game));
         return;
       }
 
@@ -137,7 +144,7 @@ export async function handleCommand(interaction, ctx) {
       games.set(gameId, game);
       setGameExpiry(games, gameId);
 
-      await interaction.reply(buildPendingMessage(game));
+      await interaction.editReply(buildPendingMessage(game));
       return;
     }
 

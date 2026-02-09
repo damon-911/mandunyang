@@ -174,14 +174,14 @@ export function buildResultUpdatePayload(game) {
           name: "플레이어 1",
           value: `${pA.label}\n${formatCard(pA.hand[0])}, ${formatCard(
             pA.hand[1],
-          )}\n→ **${pA.rank.name}**`,
+          )}→ **${pA.rank.name}**`,
           inline: false,
         },
         {
           name: "플레이어 2",
           value: `${pB.label}\n${formatCard(pB.hand[0])}, ${formatCard(
             pB.hand[1],
-          )}\n→ **${pB.rank.name}**`,
+          )}→ **${pB.rank.name}**`,
           inline: false,
         },
         { name: "결과", value: result },
