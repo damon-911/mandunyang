@@ -39,10 +39,7 @@ export async function handleCommand(interaction, ctx) {
         await interaction.reply({
           ephemeral: true,
           embeds: [
-            errorEmbed(
-              "이미 출석했어!",
-              `오늘은 이미 출석체크를 했어 😼\n\n현재 보유금: **${formatMoney(user.balance)}원**`,
-            ),
+            errorEmbed("이미 출석했어!", `오늘은 이미 출석체크를 했어 😼`),
           ],
         });
         return;
@@ -55,12 +52,12 @@ export async function handleCommand(interaction, ctx) {
           gameEmbed("📅 출석체크 완료!", [
             {
               name: "획득",
-              value: `${formatMoney(DAILY_REWARD)}원`,
+              value: `${formatMoney(DAILY_REWARD)}원\n`,
               inline: true,
             },
             {
               name: "현재 보유금",
-              value: `${formatMoney(user.balance)}원`,
+              value: `${formatMoney(user.balance)}원\n`,
               inline: true,
             },
             { name: "출석 날짜", value: today },
@@ -83,7 +80,7 @@ export async function handleCommand(interaction, ctx) {
           gameEmbed("👤 내 정보", [
             {
               name: "보유금",
-              value: `${formatMoney(user.balance)}원`,
+              value: `${formatMoney(user.balance)}원\n`,
               inline: true,
             },
             {
@@ -125,12 +122,6 @@ export async function handleCommand(interaction, ctx) {
         challengerId: interaction.user.id,
         opponentId: opponent ? opponent.id : null,
       });
-      game.playerLabels[interaction.user.id] =
-        interaction.member?.displayName ?? interaction.user.username;
-      if (opponent) {
-        game.playerLabels[opponent.id] =
-          opponent.globalName ?? opponent.username;
-      }
 
       // 솔로면 즉시 시작
       if (!opponent) {

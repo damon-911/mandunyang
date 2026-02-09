@@ -4,9 +4,9 @@ import { createDeck, shuffle, draw, formatCard } from "./cards.js";
 import { getHandRank, compareHands } from "./rank.js";
 import { gameEmbed } from "../../utils/embeds.js";
 
-function getPlayerLabel(game, id) {
+function getPlayerLabel(id) {
   if (!id) return "알 수 없음";
-  return game.playerLabels?.[id] ?? `<@${id}>`;
+  return `<@${id}>`;
 }
 
 export function createGame({ id, channelId, challengerId, opponentId }) {
@@ -20,7 +20,6 @@ export function createGame({ id, channelId, challengerId, opponentId }) {
     botId: opponentId ? null : "AI",
     ended: false,
     players: {},
-    playerLabels: {},
   };
 }
 
@@ -38,7 +37,7 @@ export function startGame(game, p1Id, opponentUserIdOrAI) {
     game.players = {
       [p1Id]: {
         id: p1Id,
-        label: getPlayerLabel(game, p1Id),
+        label: getPlayerLabel(p1Id),
         isBot: false,
         hand: p1Hand,
         rank: p1Rank,
@@ -46,7 +45,7 @@ export function startGame(game, p1Id, opponentUserIdOrAI) {
       },
       [opponentUserIdOrAI]: {
         id: opponentUserIdOrAI,
-        label: getPlayerLabel(game, opponentUserIdOrAI),
+        label: getPlayerLabel(opponentUserIdOrAI),
         isBot: false,
         hand: p2Hand,
         rank: p2Rank,
@@ -58,7 +57,7 @@ export function startGame(game, p1Id, opponentUserIdOrAI) {
     game.players = {
       [p1Id]: {
         id: p1Id,
-        label: getPlayerLabel(game, p1Id),
+        label: getPlayerLabel(p1Id),
         isBot: false,
         hand: p1Hand,
         rank: p1Rank,
@@ -79,8 +78,8 @@ export function startGame(game, p1Id, opponentUserIdOrAI) {
 }
 
 export function buildPendingMessage(game) {
-  const challengerLabel = getPlayerLabel(game, game.challengerId);
-  const opponentLabel = getPlayerLabel(game, game.opponentId);
+  const challengerLabel = getPlayerLabel(game.challengerId);
+  const opponentLabel = getPlayerLabel(game.opponentId);
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`seotda_accept:${game.id}`)
@@ -111,11 +110,11 @@ export function buildPendingMessage(game) {
 
 export function buildActiveGameMessage(game) {
   const ids = Object.keys(game.players).filter((id) => id !== "AI");
-  const p1Label = getPlayerLabel(game, ids[0]);
-  const p2Label = game.botId ? "만두냥" : getPlayerLabel(game, ids[1]);
+  const p1Label = getPlayerLabel(ids[0]);
+  const p2Label = game.botId ? "만두냥" : getPlayerLabel(ids[1]);
   const vsText = game.botId
-    ? `${p1Label} vs 만두냥`
-    : `${p1Label} vs ${p2Label}`;
+    ? `${p1Label} vs 만두냥\n`
+    : `${p1Label} vs ${p2Label}\n`;
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -149,7 +148,7 @@ export function buildHandEmbed(player) {
   const c2 = formatCard(player.hand[1]);
 
   return gameEmbed("🃏 내 패", [
-    { name: "카드", value: `${c1}, ${c2}` },
+    { name: "카드", value: `${c1}, ${c2}\n` },
     { name: "패", value: `**${player.rank.name}**` },
   ]);
 }
@@ -173,12 +172,12 @@ export function buildResultUpdatePayload(game) {
       gameEmbed("🎴 섯다 결과", [
         {
           name: pA.label,
-          value: `${formatCard(pA.hand[0])}, ${formatCard(pA.hand[1])}\n→ **${pA.rank.name}**`,
+          value: `${formatCard(pA.hand[0])}, ${formatCard(pA.hand[1])}\n→ **${pA.rank.name}**\n`,
           inline: true,
         },
         {
           name: pB.label,
-          value: `${formatCard(pB.hand[0])}, ${formatCard(pB.hand[1])}\n→ **${pB.rank.name}**`,
+          value: `${formatCard(pB.hand[0])}, ${formatCard(pB.hand[1])}\n→ **${pB.rank.name}**\n`,
           inline: true,
         },
         { name: "결과", value: result },

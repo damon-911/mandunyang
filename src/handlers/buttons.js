@@ -52,8 +52,6 @@ export async function handleButton(interaction, action, gameId, ctx) {
         return;
       }
 
-      game.playerLabels[interaction.user.id] =
-        interaction.member?.displayName ?? interaction.user.username;
       startGame(game, game.challengerId, game.opponentId);
       games.set(gameId, game);
 
