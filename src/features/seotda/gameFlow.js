@@ -9,6 +9,10 @@ function getPlayerLabel(id) {
   return `<@${id}>`;
 }
 
+function getBotLabel(game) {
+  return game.botUserId ? `<@${game.botUserId}>` : "만두냥";
+}
+
 export function createGame({ id, channelId, challengerId, opponentId }) {
   return {
     id,
@@ -18,6 +22,7 @@ export function createGame({ id, channelId, challengerId, opponentId }) {
     challengerId,
     opponentId: opponentId ?? null,
     botId: opponentId ? null : "AI",
+    botUserId: null,
     ended: false,
     players: {},
   };
@@ -52,26 +57,26 @@ export function startGame(game, p1Id, opponentUserIdOrAI) {
         checked: false,
       },
     };
-  } else {
-    game.botId = "AI";
-    game.players = {
-      [p1Id]: {
-        id: p1Id,
-        label: getPlayerLabel(p1Id),
+    } else {
+      game.botId = "AI";
+      game.players = {
+        [p1Id]: {
+          id: p1Id,
+          label: getPlayerLabel(p1Id),
         isBot: false,
         hand: p1Hand,
         rank: p1Rank,
         checked: false,
       },
-      AI: {
-        id: "AI",
-        label: "만두냥",
-        isBot: true,
-        hand: p2Hand,
-        rank: p2Rank,
-        checked: true,
-      },
-    };
+        AI: {
+          id: "AI",
+          label: getBotLabel(game),
+          isBot: true,
+          hand: p2Hand,
+          rank: p2Rank,
+          checked: true,
+        },
+      };
   }
 
   game.state = "active";
@@ -111,9 +116,9 @@ export function buildPendingMessage(game) {
 export function buildActiveGameMessage(game) {
   const ids = Object.keys(game.players).filter((id) => id !== "AI");
   const p1Label = getPlayerLabel(ids[0]);
-  const p2Label = game.botId ? "만두냥" : getPlayerLabel(ids[1]);
+  const p2Label = game.botId ? getBotLabel(game) : getPlayerLabel(ids[1]);
   const vsText = game.botId
-    ? `${p1Label} vs 만두냥`
+    ? `${p1Label} vs ${p2Label}`
     : `${p1Label} vs ${p2Label}`;
 
   const row = new ActionRowBuilder().addComponents(

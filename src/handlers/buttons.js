@@ -152,24 +152,6 @@ export async function handleButton(interaction, action, gameId, ctx) {
         return;
       }
 
-      // 사람 vs 사람일 때: 둘 다 패 확인 후 승부 보기
-      if (!game.botId) {
-        const ids = Object.keys(game.players).filter((id) => id !== "AI");
-        const allChecked = ids.every((id) => game.players[id]?.checked);
-        if (!allChecked) {
-          await safeReply(interaction, {
-            ephemeral: true,
-            embeds: [
-              errorEmbed(
-                "아직 안 돼!",
-                "두 사람 모두 **패 확인**을 누른 뒤에 승부를 볼 수 있어!",
-              ),
-            ],
-          });
-          return;
-        }
-      }
-
       const payload = buildResultUpdatePayload(game);
 
       game.ended = true;

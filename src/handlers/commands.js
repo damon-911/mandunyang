@@ -80,7 +80,7 @@ export async function handleCommand(interaction, ctx) {
           gameEmbed("👤 내 정보", [
             {
               name: "보유금",
-              value: `${formatMoney(user.balance)}원\n \n`,
+              value: `${formatMoney(user.balance)}원`,
               inline: false,
             },
             {
@@ -127,6 +127,7 @@ export async function handleCommand(interaction, ctx) {
 
       // 솔로면 즉시 시작
       if (!opponent) {
+        game.botUserId = interaction.client.user?.id ?? null;
         startGame(game, interaction.user.id, "AI");
         games.set(gameId, game);
         setGameExpiry(games, gameId);
