@@ -10,6 +10,13 @@ const commands = [
   new SlashCommandBuilder()
     .setName("섯다")
     .setDescription("섯다 게임")
+    .addIntegerOption((opt) =>
+      opt
+        .setName("배팅")
+        .setDescription("배팅 금액 (최소 1,000원)")
+        .setMinValue(1000)
+        .setRequired(true),
+    )
     .addUserOption((opt) =>
       opt
         .setName("상대")

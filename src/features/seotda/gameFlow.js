@@ -25,6 +25,7 @@ export function createGame({ id, channelId, challengerId, opponentId }) {
     botUserId: null,
     ended: false,
     players: {},
+    betAmount: 0,
   };
 }
 
@@ -85,6 +86,9 @@ export function startGame(game, p1Id, opponentUserIdOrAI) {
 export function buildPendingMessage(game) {
   const challengerLabel = getPlayerLabel(game.challengerId);
   const opponentLabel = getPlayerLabel(game.opponentId);
+  const betText = game.betAmount
+    ? `${game.betAmount.toLocaleString("ko-KR")}원`
+    : "없음";
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`seotda_accept:${game.id}`)
@@ -103,6 +107,7 @@ export function buildPendingMessage(game) {
           name: "대결",
           value: `${challengerLabel} vs ${opponentLabel}`,
         },
+        { name: "배팅", value: betText, inline: true },
         {
           name: "안내",
           value: `👉 ${opponentLabel} 님이 **수락/거절**을 눌러주세요.`,
@@ -117,6 +122,9 @@ export function buildActiveGameMessage(game) {
   const ids = Object.keys(game.players).filter((id) => id !== "AI");
   const p1Label = getPlayerLabel(ids[0]);
   const p2Label = game.botId ? getBotLabel(game) : getPlayerLabel(ids[1]);
+  const betText = game.betAmount
+    ? `${game.betAmount.toLocaleString("ko-KR")}원`
+    : "없음";
   const vsText = game.botId
     ? `${p1Label} vs ${p2Label}`
     : `${p1Label} vs ${p2Label}`;
@@ -133,17 +141,18 @@ export function buildActiveGameMessage(game) {
   );
 
   return {
-    embeds: [
-      gameEmbed("🎴 섯다 시작!", [
-        { name: "대결", value: vsText },
-        {
-          name: "진행 방법",
-          value:
-            "• **패 확인**: 본인에게만 패 공개\n" +
-            "• **승부 보기**: 패 공개 후 결과 확인",
-        },
-      ]),
-    ],
+        embeds: [
+          gameEmbed("🎴 섯다 시작!", [
+            { name: "대결", value: vsText },
+            { name: "배팅", value: betText, inline: true },
+            {
+              name: "진행 방법",
+              value:
+                "• **패 확인**: 본인에게만 패 공개\n" +
+                "• **승부 보기**: 패 공개 후 결과 확인",
+            },
+          ]),
+        ],
     components: [row],
   };
 }

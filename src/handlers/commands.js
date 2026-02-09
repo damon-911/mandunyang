@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 
 import { infoEmbed, errorEmbed, gameEmbed } from "../utils/embeds.js";
 import { getKstDateString } from "../utils/kst.js";
-import { getUser, canAttend, attend } from "../data/userStore.js";
+import { getUser, getBalance, addBalance, canAttend, attend } from "../data/userStore.js";
 
 import {
   createGame,
@@ -96,6 +96,8 @@ export async function handleCommand(interaction, ctx) {
 
     case "섯다": {
       const opponent = interaction.options.getUser("상대"); // 없으면 null
+      const betInput = interaction.options.getInteger("배팅");
+      const betAmount = betInput ?? 1000;
 
       if (opponent && opponent.id === interaction.user.id) {
         await interaction.reply({
@@ -115,6 +117,23 @@ export async function handleCommand(interaction, ctx) {
         return;
       }
 
+      if (betAmount < 1000) {
+        await interaction.reply({
+          ephemeral: true,
+          embeds: [errorEmbed("배팅 금액 오류", "배팅은 최소 1,000원부터 가능해!")],
+        });
+        return;
+      }
+
+      const challengerBalance = await getBalance(interaction.user.id);
+      if (challengerBalance < betAmount) {
+        await interaction.reply({
+          ephemeral: true,
+          embeds: [errorEmbed("잔액 부족", "보유금이 부족해서 배팅할 수 없어!")],
+        });
+        return;
+      }
+
       await interaction.deferReply();
 
       const gameId = randomUUID();
@@ -124,10 +143,12 @@ export async function handleCommand(interaction, ctx) {
         challengerId: interaction.user.id,
         opponentId: opponent ? opponent.id : null,
       });
+      game.betAmount = betAmount;
 
       // 솔로면 즉시 시작
       if (!opponent) {
         game.botUserId = interaction.client.user?.id ?? null;
+        await addBalance(interaction.user.id, -betAmount);
         startGame(game, interaction.user.id, "AI");
         games.set(gameId, game);
         setGameExpiry(games, gameId);
