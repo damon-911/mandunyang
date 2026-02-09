@@ -80,10 +80,9 @@ export async function handleCommand(interaction, ctx) {
           gameEmbed("👤 내 정보", [
             {
               name: "보유금",
-              value: `${formatMoney(user.balance)}원`,
+              value: `${formatMoney(user.balance)}원\n \n`,
               inline: false,
             },
-            { name: "\u200B", value: "\u200B", inline: false },
             {
               name: "마지막 출석",
               value: lastAttendance ?? "없음",

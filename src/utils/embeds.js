@@ -6,7 +6,7 @@ export function infoEmbed(title, description) {
   return new EmbedBuilder()
     .setColor(COLOR)
     .setTitle(title)
-    .setDescription(description)
+    .setDescription(description + "\n")
     .setTimestamp();
 }
 
