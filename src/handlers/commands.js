@@ -83,11 +83,7 @@ export async function handleCommand(interaction, ctx) {
               value: `${formatMoney(user.balance)}원`,
               inline: false,
             },
-            {
-              name: "",
-              value: "",
-              inline: false,
-            },
+            { name: "\u200B", value: "\u200B", inline: false },
             {
               name: "마지막 출석",
               value: lastAttendance ?? "없음",
