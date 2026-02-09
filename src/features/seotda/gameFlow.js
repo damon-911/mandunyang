@@ -2,7 +2,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
 import { createDeck, shuffle, draw, formatCard } from "./cards.js";
 import { getHandRank, compareHands } from "./rank.js";
-import { gameEmbed } from "../utils/embeds.js";
+import { gameEmbed } from "../../utils/embeds.js";
 
 export function createGame({ id, channelId, challengerId, opponentId }) {
     return {

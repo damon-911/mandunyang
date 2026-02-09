@@ -48,5 +48,5 @@ export function draw(deck, n = 1) {
 }
 
 export function formatCard(card) {
-  return `${card.label}(${card.cardId})`;
+  return `${card.label}`;
 }

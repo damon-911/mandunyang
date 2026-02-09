@@ -4,12 +4,12 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "deploy:commands": "node deploy-commands.js"
+    "start": "node src/index.js",
+    "deploy:commands": "node scripts/deploy-commands.js"
   },
   "dependencies": {
     "discord.js": "^14.0.0",
-    "dotenv": "^16.0.0"
+    "dotenv": "^16.0.0",
+    "pg": "^8.18.0"
   }
 }
-

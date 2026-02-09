@@ -4,7 +4,7 @@ import {
     buildActiveGameMessage,
     buildHandEmbed,
     buildResultUpdatePayload,
-} from '../seotda/gameFlow.js';
+} from '../features/seotda/gameFlow.js';
 
 function safeGetPlayer(game, userId) {
     return game.players[userId] ?? null;
