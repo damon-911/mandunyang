@@ -67,78 +67,79 @@ client.once('ready', () => {
 
 client.on('interactionCreate', async (interaction) => {
   try {
-    // 슬래시 명령어가 아닌 경우
-    if (!interaction.isChatInputCommand()) return;
+    // 1) 슬래시 명령어
+    if (interaction.isChatInputCommand()) {
+      // "/핑" 명령어
+      if (interaction.commandName === '핑') {
+        await interaction.reply('퐁! 🏓');
+      }
+      // "/섯다" 명령어
+      else if (interaction.commandName === '섯다') {
+        const opponent = interaction.options.getUser('상대'); // 없으면 null
 
-    if (interaction.commandName === '핑') {
-      await interaction.reply('퐁! 🏓');
-    }
-    else if (interaction.commandName === '섯다') {
-      const opponent = interaction.options.getUser('상대'); // 없으면 null
+        // 상대가 자기 자신이면 막기
+        if (opponent && opponent.id === interaction.user.id) {
+          await interaction.reply({ content: '자기 자신과는 대결할 수 없어 😅', ephemeral: true });
+          return;
+        }
 
-      // 상대가 자기 자신이면 막기
-      if (opponent && opponent.id === interaction.user.id) {
-        await interaction.reply({ content: '자기 자신과는 대결할 수 없어 😅', ephemeral: true });
+        // 상대가 봇이면 막기(옵션 없이 쓰면 만두냥과 대결)
+        if (opponent && opponent.bot) {
+          await interaction.reply({ content: '봇이 아닌 사람을 태그해줘! (옵션 없이 쓰면 만두냥과 대결해)', ephemeral: true });
+          return;
+        }
+
+        const deck = shuffle(createDeck());
+
+        // 플레이어 1 (명령어 친 사람)
+        const p1Hand = draw(deck, 2);
+        const p1Rank = getHandRank(p1Hand[0], p1Hand[1]);
+
+        // 플레이어 2 (상대 or 만두냥)
+        const p2Hand = draw(deck, 2);
+        const p2Rank = getHandRank(p2Hand[0], p2Hand[1]);
+
+        const gameId = randomUUID();
+        const game = {
+          id: gameId,
+          channelId: interaction.channelId,
+          createdAt: Date.now(),
+          ended: false,
+          botId: opponent ? null : 'AI',
+          players: {
+            [interaction.user.id]: {
+              id: interaction.user.id,
+              label: `<@${interaction.user.id}>`,
+              isBot: false,
+              hand: p1Hand,
+              rank: p1Rank,
+              checked: false,
+            },
+            [opponent ? opponent.id : 'AI']: {
+              id: opponent ? opponent.id : 'AI',
+              label: opponent ? `<@${opponent.id}>` : '만두냥',
+              isBot: !opponent,
+              hand: p2Hand,
+              rank: p2Rank,
+              checked: !opponent, // 만두냥은 굳이 “확인” 안 해도 되게 true 처리
+            },
+          },
+        };
+
+        games.set(gameId, game);
+
+        // 10분 지나면 자동 폐기(메모리 정리용)
+        setTimeout(() => {
+          const g = games.get(gameId);
+          if (g && !g.ended) games.delete(gameId);
+        }, 10 * 60 * 1000);
+
+        await interaction.reply(buildGameMessage(game));
         return;
       }
-
-      // 상대가 봇이면 막기(옵션 없이 쓰면 만두냥과 대결)
-      if (opponent && opponent.bot) {
-        await interaction.reply({ content: '봇이 아닌 사람을 태그해줘! (옵션 없이 쓰면 만두냥과 대결해)', ephemeral: true });
-        return;
-      }
-
-      const deck = shuffle(createDeck());
-
-      // 플레이어 1 (명령어 친 사람)
-      const p1Hand = draw(deck, 2);
-      const p1Rank = getHandRank(p1Hand[0], p1Hand[1]);
-
-      // 플레이어 2 (상대 or 만두냥)
-      const p2Hand = draw(deck, 2);
-      const p2Rank = getHandRank(p2Hand[0], p2Hand[1]);
-
-      const gameId = randomUUID();
-      const game = {
-        id: gameId,
-        channelId: interaction.channelId,
-        createdAt: Date.now(),
-        ended: false,
-        botId: opponent ? null : 'AI',
-        players: {
-          [interaction.user.id]: {
-            id: interaction.user.id,
-            label: `<@${interaction.user.id}>`,
-            isBot: false,
-            hand: p1Hand,
-            rank: p1Rank,
-            checked: false,
-          },
-          [opponent ? opponent.id : 'AI']: {
-            id: opponent ? opponent.id : 'AI',
-            label: opponent ? `<@${opponent.id}>` : '만두냥',
-            isBot: !opponent,
-            hand: p2Hand,
-            rank: p2Rank,
-            checked: !opponent, // 만두냥은 굳이 “확인” 안 해도 되게 true 처리
-          },
-        },
-      };
-
-      games.set(gameId, game);
-
-      // 10분 지나면 자동 폐기(메모리 정리용)
-      setTimeout(() => {
-        const g = games.get(gameId);
-        if (g && !g.ended) games.delete(gameId);
-      }, 10 * 60 * 1000);
-
-      await interaction.reply(buildGameMessage(game));
-      return;
     }
-
-    // 2) Buttons
-    if (interaction.isButton()) {
+    // 2) 버튼
+    else if (interaction.isButton()) {
       const [action, gameId] = interaction.customId.split(':');
       if (!action || !gameId) return;
 
