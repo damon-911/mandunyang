@@ -12,14 +12,14 @@ async function getOrCreateUser(userId) {
     `INSERT INTO users (user_id)
      VALUES ($1)
      ON CONFLICT (user_id) DO NOTHING`,
-    [userId]
+    [userId],
   );
 
   const res = await pool.query(
     `SELECT user_id, balance, last_attendance_date
      FROM users
      WHERE user_id = $1`,
-    [userId]
+    [userId],
   );
 
   return res.rows[0];
@@ -45,7 +45,7 @@ export async function addBalance(userId, amount) {
     WHERE user_id = $1
     RETURNING user_id, balance, last_attendance_date
     `,
-    [userId, amount]
+    [userId, amount],
   );
 
   return res.rows[0];
@@ -72,7 +72,7 @@ export async function markAttendance(userId, kstDateStr = getKstDateStr()) {
     WHERE user_id = $1
     RETURNING user_id, balance, last_attendance_date
     `,
-    [userId, kstDateStr]
+    [userId, kstDateStr],
   );
 
   return res.rows[0];
@@ -90,7 +90,7 @@ export async function attend(userId, kstDateStr = getKstDateStr(), reward = 0) {
     WHERE user_id = $1
     RETURNING user_id, balance, last_attendance_date
     `,
-    [userId, kstDateStr, reward]
+    [userId, kstDateStr, reward],
   );
 
   return res.rows[0];

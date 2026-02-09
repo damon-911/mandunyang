@@ -1,36 +1,36 @@
-import 'dotenv/config';
-import { REST, Routes, SlashCommandBuilder } from 'discord.js';
+import "dotenv/config";
+import { REST, Routes, SlashCommandBuilder } from "discord.js";
 
 const commands = [
   new SlashCommandBuilder()
-    .setName('핑')
-    .setDescription('만두냥 작동 테스트')
+    .setName("핑")
+    .setDescription("만두냥 작동 테스트")
     .toJSON(),
 
   new SlashCommandBuilder()
-    .setName('섯다')
-    .setDescription('섯다 게임')
-    .addUserOption(opt =>
-      opt.setName('상대')
-        .setDescription('대결할 사람을 태그')
-        .setRequired(false)
+    .setName("섯다")
+    .setDescription("섯다 게임")
+    .addUserOption((opt) =>
+      opt
+        .setName("상대")
+        .setDescription("대결할 사람을 태그")
+        .setRequired(false),
     )
     .toJSON(),
 
   new SlashCommandBuilder()
-    .setName('출석체크')
-    .setDescription('하루 한 번 출석하고 10,000원 받기')
+    .setName("출석체크")
+    .setDescription("하루 한 번 출석하고 10,000원 받기")
     .toJSON(),
 
   new SlashCommandBuilder()
-    .setName('내정보')
-    .setDescription('내 게임머니/출석 정보 확인')
+    .setName("내정보")
+    .setDescription("내 게임머니/출석 정보 확인")
     .toJSON(),
 ];
 
-const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
-await rest.put(
-  Routes.applicationCommands(process.env.CLIENT_ID),
-  { body: commands }
-);
+await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), {
+  body: commands,
+});

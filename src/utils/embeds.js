@@ -1,4 +1,4 @@
-import { EmbedBuilder } from 'discord.js';
+import { EmbedBuilder } from "discord.js";
 
 const COLOR = 0xffc83d; // 만두냥 컬러
 
@@ -24,6 +24,6 @@ export function gameEmbed(title, fields = []) {
     .setTitle(title)
     .setTimestamp();
 
-  fields.forEach(f => embed.addFields(f));
+  fields.forEach((f) => embed.addFields(f));
   return embed;
 }
