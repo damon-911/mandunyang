@@ -45,12 +45,59 @@ function buildInitialBettingComponents(game, balance) {
   const canMax = game.currentBet === 0 && balance >= maxAmount && maxAmount > 0;
   const canDie = game.currentBet > 0;
 
+  if (game.botId) {
+    const row1 = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`seotda_check:${game.id}`)
+        .setLabel("패 확인")
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId(`seotda_rules:${game.id}`)
+        .setLabel("족보")
+        .setStyle(ButtonStyle.Secondary),
+    );
+
+    const row2 = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`seotda_bet:${game.id}:check`)
+        .setLabel("체크")
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(disableAll || !canCheck),
+      new ButtonBuilder()
+        .setCustomId(`seotda_bet:${game.id}:quarter`)
+        .setLabel(`쿼터(${formatMoney(quarterAmount)})`)
+        .setStyle(ButtonStyle.Success)
+        .setDisabled(disableAll || !canQuarter),
+    );
+
+    const row3 = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`seotda_bet:${game.id}:half`)
+        .setLabel(`하프(${formatMoney(halfAmount)})`)
+        .setStyle(ButtonStyle.Success)
+        .setDisabled(disableAll || !canHalf),
+      new ButtonBuilder()
+        .setCustomId(`seotda_bet:${game.id}:max`)
+        .setLabel(`올인(${formatMoney(maxAmount)})`)
+        .setStyle(ButtonStyle.Success)
+        .setDisabled(disableAll || !canMax),
+    );
+
+    return [row1, row2, row3];
+  }
+
   const row1 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId(`seotda_bet:${game.id}:check`)
-      .setLabel("체크")
-      .setStyle(ButtonStyle.Secondary)
-      .setDisabled(disableAll || !canCheck),
+      .setCustomId(`seotda_check:${game.id}`)
+      .setLabel("패 확인")
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId(`seotda_rules:${game.id}`)
+      .setLabel("족보")
+      .setStyle(ButtonStyle.Secondary),
+  );
+
+  const row2 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`seotda_bet:${game.id}:call`)
       .setLabel(
@@ -63,35 +110,35 @@ function buildInitialBettingComponents(game, balance) {
       .setLabel("다이")
       .setStyle(ButtonStyle.Danger)
       .setDisabled(disableAll || !canDie),
+  );
+
+  const row3 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`seotda_bet:${game.id}:check`)
+      .setLabel("체크")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(disableAll || !canCheck),
     new ButtonBuilder()
       .setCustomId(`seotda_bet:${game.id}:quarter`)
       .setLabel(`쿼터(${formatMoney(quarterAmount)})`)
       .setStyle(ButtonStyle.Success)
       .setDisabled(disableAll || !canQuarter),
+  );
+
+  const row4 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`seotda_bet:${game.id}:half`)
       .setLabel(`하프(${formatMoney(halfAmount)})`)
       .setStyle(ButtonStyle.Success)
       .setDisabled(disableAll || !canHalf),
-  );
-
-  const row2 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`seotda_bet:${game.id}:max`)
       .setLabel(`맥스(${formatMoney(maxAmount)})`)
       .setStyle(ButtonStyle.Success)
       .setDisabled(disableAll || !canMax),
-    new ButtonBuilder()
-      .setCustomId(`seotda_check:${game.id}`)
-      .setLabel("패 확인")
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId(`seotda_rules:${game.id}`)
-      .setLabel("족보")
-      .setStyle(ButtonStyle.Secondary),
   );
 
-  return [row1, row2];
+  return [row1, row2, row3, row4];
 }
 
 function setGameExpiry(games, gameId, ms = 10 * 60 * 1000) {

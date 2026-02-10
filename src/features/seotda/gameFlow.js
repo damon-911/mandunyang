@@ -194,7 +194,8 @@ export function buildHandEmbed(player) {
   const c2 = formatCard(player.hand[1]);
 
   return gameEmbed("🃏 내 패", [
-    { name: "카드", value: `${c1}, ${c2}` },
+    { name: "카드", value: `${c1} / ${c2}` },
+    { name: "", value: "" },
     { name: "패", value: `**${player.rank.name}**` },
   ]);
 }
@@ -217,21 +218,18 @@ export function buildResultUpdatePayload(game) {
     embeds: [
       gameEmbed("🎴 섯다 결과", [
         {
-          name: `${pA.label}`,
-          value: `${formatCard(pA.hand[0])} / ${formatCard(pA.hand[1])} → **${pA.rank.name}**`,
-          inline: false,
+          name: `플레이어 1`,
+          value: `${pA.label}\n${formatCard(pA.hand[0])} / ${formatCard(pA.hand[1])} → **${pA.rank.name}**`,
         },
         {
-          name: `\n${pB.label}`,
-          value: `${formatCard(pB.hand[0])} / ${formatCard(pB.hand[1])} → **${pB.rank.name}**`,
-          inline: false,
+          name: `플레이어 2`,
+          value: `{pB.label}\n${formatCard(pB.hand[0])} / ${formatCard(pB.hand[1])} → **${pB.rank.name}**`,
         },
         {
-          name: "\n판돈",
+          name: "판돈",
           value: `${game.pot.toLocaleString("ko-KR")}원`,
-          inline: false,
         },
-        { name: "\n결과", value: result },
+        { name: "결과", value: result },
       ]),
     ],
   };
