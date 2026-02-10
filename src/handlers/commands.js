@@ -1,8 +1,16 @@
 import { randomUUID } from "crypto";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
 import { infoEmbed, errorEmbed, gameEmbed } from "../utils/embeds.js";
 import { getKstDateString } from "../utils/kst.js";
-import { getUser, getBalance, addBalance, canAttend, attend } from "../data/userStore.js";
+import { buildSeotdaRulesText } from "../utils/seotdaRules.js";
+import {
+  getUser,
+  getBalance,
+  addBalance,
+  canAttend,
+  attend,
+} from "../data/userStore.js";
 
 import {
   createGame,
@@ -12,6 +20,66 @@ import {
 } from "../features/seotda/gameFlow.js";
 
 const formatMoney = (amount) => Number(amount ?? 0).toLocaleString("ko-KR");
+
+function buildInitialBettingComponents(game, balance) {
+  const quarterAmount = Math.max(1, Math.floor(game.pot * 0.25));
+  const halfAmount = Math.max(1, Math.floor(game.pot * 0.5));
+  const maxAmount = Math.max(0, balance);
+
+  const disableAll = game.turnId === "AI";
+  const canCheck = game.currentBet === 0;
+  const canCall = game.currentBet > 0 && balance >= game.currentBet;
+  const canQuarter = game.currentBet === 0 && balance >= quarterAmount;
+  const canHalf = game.currentBet === 0 && balance >= halfAmount;
+  const canMax = game.currentBet === 0 && balance >= maxAmount && maxAmount > 0;
+  const canDie = game.currentBet > 0;
+
+  const row1 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`seotda_bet:${game.id}:check`)
+      .setLabel("체크")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(disableAll || !canCheck),
+    new ButtonBuilder()
+      .setCustomId(`seotda_bet:${game.id}:call`)
+      .setLabel(`콜${game.currentBet ? `(${formatMoney(game.currentBet)})` : ""}`)
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(disableAll || !canCall),
+    new ButtonBuilder()
+      .setCustomId(`seotda_bet:${game.id}:die`)
+      .setLabel("다이")
+      .setStyle(ButtonStyle.Danger)
+      .setDisabled(disableAll || !canDie),
+    new ButtonBuilder()
+      .setCustomId(`seotda_bet:${game.id}:quarter`)
+      .setLabel(`쿼터(${formatMoney(quarterAmount)})`)
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(disableAll || !canQuarter),
+    new ButtonBuilder()
+      .setCustomId(`seotda_bet:${game.id}:half`)
+      .setLabel(`하프(${formatMoney(halfAmount)})`)
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(disableAll || !canHalf),
+  );
+
+  const row2 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`seotda_bet:${game.id}:max`)
+      .setLabel(`맥스(${formatMoney(maxAmount)})`)
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(disableAll || !canMax),
+    new ButtonBuilder()
+      .setCustomId(`seotda_check:${game.id}`)
+      .setLabel("패 확인")
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId(`seotda_rules:${game.id}`)
+      .setLabel("족보")
+      .setStyle(ButtonStyle.Secondary),
+  );
+
+  return [row1, row2];
+}
 
 function setGameExpiry(games, gameId, ms = 10 * 60 * 1000) {
   setTimeout(() => {
@@ -94,10 +162,18 @@ export async function handleCommand(interaction, ctx) {
       return;
     }
 
+    case "족보": {
+      await interaction.reply({
+        ephemeral: true,
+        embeds: [infoEmbed("🎴 섯다 족보", buildSeotdaRulesText())],
+      });
+      return;
+    }
+
     case "섯다": {
       const opponent = interaction.options.getUser("상대"); // 없으면 null
-      const betInput = interaction.options.getInteger("배팅");
-      const betAmount = betInput ?? 1000;
+      const baseInput = interaction.options.getInteger("기본금");
+      const baseAmount = baseInput ?? 1000;
 
       if (opponent && opponent.id === interaction.user.id) {
         await interaction.reply({
@@ -117,19 +193,19 @@ export async function handleCommand(interaction, ctx) {
         return;
       }
 
-      if (betAmount < 1000) {
+      if (baseAmount < 1000) {
         await interaction.reply({
           ephemeral: true,
-          embeds: [errorEmbed("배팅 금액 오류", "배팅은 최소 1,000원부터 가능해!")],
+          embeds: [errorEmbed("기본금 오류", "기본금은 최소 1,000원부터 가능해!")],
         });
         return;
       }
 
       const challengerBalance = await getBalance(interaction.user.id);
-      if (challengerBalance < betAmount) {
+      if (challengerBalance < baseAmount) {
         await interaction.reply({
           ephemeral: true,
-          embeds: [errorEmbed("잔액 부족", "보유금이 부족해서 배팅할 수 없어!")],
+          embeds: [errorEmbed("잔액 부족", "보유금이 부족해서 기본금을 낼 수 없어!")],
         });
         return;
       }
@@ -143,17 +219,20 @@ export async function handleCommand(interaction, ctx) {
         challengerId: interaction.user.id,
         opponentId: opponent ? opponent.id : null,
       });
-      game.betAmount = betAmount;
+      game.baseAmount = baseAmount;
 
       // 솔로면 즉시 시작
       if (!opponent) {
         game.botUserId = interaction.client.user?.id ?? null;
-        await addBalance(interaction.user.id, -betAmount);
+        await addBalance(interaction.user.id, -baseAmount);
+        game.pot = baseAmount * 2;
         startGame(game, interaction.user.id, "AI");
         games.set(gameId, game);
         setGameExpiry(games, gameId);
 
-        await interaction.editReply(buildActiveGameMessage(game));
+        const payload = buildActiveGameMessage(game);
+        payload.components = buildInitialBettingComponents(game, challengerBalance - baseAmount);
+        await interaction.editReply(payload);
         return;
       }
 

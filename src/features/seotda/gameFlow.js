@@ -25,7 +25,14 @@ export function createGame({ id, channelId, challengerId, opponentId }) {
     botUserId: null,
     ended: false,
     players: {},
-    betAmount: 0,
+    baseAmount: 0,
+    pot: 0,
+    round: 1,
+    maxRounds: 3,
+    currentBet: 0,
+    lastBetBy: null,
+    checksInRow: 0,
+    turnId: challengerId,
   };
 }
 
@@ -58,36 +65,41 @@ export function startGame(game, p1Id, opponentUserIdOrAI) {
         checked: false,
       },
     };
-    } else {
-      game.botId = "AI";
-      game.players = {
-        [p1Id]: {
-          id: p1Id,
-          label: getPlayerLabel(p1Id),
+  } else {
+    game.botId = "AI";
+    game.players = {
+      [p1Id]: {
+        id: p1Id,
+        label: getPlayerLabel(p1Id),
         isBot: false,
         hand: p1Hand,
         rank: p1Rank,
         checked: false,
       },
-        AI: {
-          id: "AI",
-          label: getBotLabel(game),
-          isBot: true,
-          hand: p2Hand,
-          rank: p2Rank,
-          checked: true,
-        },
-      };
+      AI: {
+        id: "AI",
+        label: getBotLabel(game),
+        isBot: true,
+        hand: p2Hand,
+        rank: p2Rank,
+        checked: true,
+      },
+    };
   }
 
   game.state = "active";
+  game.round = 1;
+  game.currentBet = 0;
+  game.lastBetBy = null;
+  game.checksInRow = 0;
+  game.turnId = p1Id;
 }
 
 export function buildPendingMessage(game) {
   const challengerLabel = getPlayerLabel(game.challengerId);
   const opponentLabel = getPlayerLabel(game.opponentId);
-  const betText = game.betAmount
-    ? `${game.betAmount.toLocaleString("ko-KR")}원`
+  const baseText = game.baseAmount
+    ? `${game.baseAmount.toLocaleString("ko-KR")}원`
     : "없음";
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -99,6 +111,12 @@ export function buildPendingMessage(game) {
       .setLabel("거절")
       .setStyle(ButtonStyle.Danger),
   );
+  const rulesRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`seotda_rules:${game.id}`)
+      .setLabel("족보")
+      .setStyle(ButtonStyle.Secondary),
+  );
 
   return {
     embeds: [
@@ -107,14 +125,14 @@ export function buildPendingMessage(game) {
           name: "대결",
           value: `${challengerLabel} vs ${opponentLabel}`,
         },
-        { name: "배팅", value: betText, inline: true },
+        { name: "기본금", value: baseText, inline: true },
         {
           name: "안내",
           value: `👉 ${opponentLabel} 님이 **수락/거절**을 눌러주세요.`,
         },
       ]),
     ],
-    components: [row],
+    components: [row, rulesRow],
   };
 }
 
@@ -122,38 +140,52 @@ export function buildActiveGameMessage(game) {
   const ids = Object.keys(game.players).filter((id) => id !== "AI");
   const p1Label = getPlayerLabel(ids[0]);
   const p2Label = game.botId ? getBotLabel(game) : getPlayerLabel(ids[1]);
-  const betText = game.betAmount
-    ? `${game.betAmount.toLocaleString("ko-KR")}원`
+  const baseText = game.baseAmount
+    ? `${game.baseAmount.toLocaleString("ko-KR")}원`
     : "없음";
+  const potText = `${game.pot.toLocaleString("ko-KR")}원`;
   const vsText = game.botId
     ? `${p1Label} vs ${p2Label}`
     : `${p1Label} vs ${p2Label}`;
 
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`seotda_check:${game.id}`)
-      .setLabel("패 확인")
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId(`seotda_show:${game.id}`)
-      .setLabel("승부 보기")
-      .setStyle(ButtonStyle.Success),
-  );
-
   return {
-        embeds: [
-          gameEmbed("🎴 섯다 시작!", [
-            { name: "대결", value: vsText },
-            { name: "배팅", value: betText, inline: true },
-            {
-              name: "진행 방법",
-              value:
-                "• **패 확인**: 본인에게만 패 공개\n" +
-                "• **승부 보기**: 패 공개 후 결과 확인",
-            },
-          ]),
-        ],
-    components: [row],
+    embeds: [
+      gameEmbed("🎴 섯다 시작!", [
+        { name: "대결", value: vsText },
+        { name: "기본금", value: baseText, inline: true },
+        { name: "판돈", value: potText, inline: true },
+        {
+          name: "라운드",
+          value: `${game.round} / ${game.maxRounds}`,
+          inline: true,
+        },
+        {
+          name: "차례",
+          value:
+            game.turnId === "AI"
+              ? getBotLabel(game)
+              : getPlayerLabel(game.turnId),
+          inline: true,
+        },
+        {
+          name: "현재 베팅",
+          value:
+            game.currentBet > 0
+              ? `${game.currentBet.toLocaleString("ko-KR")}원`
+              : "없음",
+          inline: true,
+        },
+        {
+          name: "진행 방법",
+          value:
+            "• **체크**: 배팅 없이 넘기기\n" +
+            "• **콜**: 상대 배팅과 동일하게 내기\n" +
+            "• **쿼터/하프/맥스**: 판돈 기준 추가 배팅\n" +
+            "• **다이**: 포기하고 판돈 양보",
+        },
+      ]),
+    ],
+    components: [],
   };
 }
 
@@ -197,6 +229,11 @@ export function buildResultUpdatePayload(game) {
             pB.hand[1],
           )} → **${pB.rank.name}**`,
           inline: false,
+        },
+        {
+          name: "판돈",
+          value: `${game.pot.toLocaleString("ko-KR")}원`,
+          inline: true,
         },
         { name: "결과", value: result },
       ]),

@@ -12,10 +12,10 @@ const commands = [
     .setDescription("섯다 게임")
     .addIntegerOption((opt) =>
       opt
-        .setName("배팅")
-        .setDescription("배팅 금액 (최소 1,000원)")
+        .setName("기본금")
+        .setDescription("기본금 (최소 1,000원)")
         .setMinValue(1000)
-        .setRequired(true),
+        .setRequired(false),
     )
     .addUserOption((opt) =>
       opt
@@ -33,6 +33,11 @@ const commands = [
   new SlashCommandBuilder()
     .setName("내정보")
     .setDescription("내 게임머니/출석 정보 확인")
+    .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("족보")
+    .setDescription("섯다 족보 보기")
     .toJSON(),
 ];
 

@@ -23,10 +23,10 @@ client.on("interactionCreate", async (interaction) => {
     }
 
     if (interaction.isButton()) {
-      const [action, gameId] = interaction.customId.split(":");
+      const [action, gameId, subAction] = interaction.customId.split(":");
       if (!action || !gameId) return;
 
-      await handleButton(interaction, action, gameId, { games });
+      await handleButton(interaction, action, gameId, { games }, subAction);
       return;
     }
   } catch (err) {
