@@ -51,13 +51,9 @@ function buildInitialBettingComponents(game, balance) {
     quarterAmount > 0 &&
     quarterAmount >= game.currentBet;
   const canHalf =
-    balance >= halfRequired &&
-    halfAmount > 0 &&
-    halfAmount >= game.currentBet;
+    balance >= halfRequired && halfAmount > 0 && halfAmount >= game.currentBet;
   const canMax =
-    balance >= maxRequired &&
-    maxAmount > 0 &&
-    maxAmount >= game.currentBet;
+    balance >= maxRequired && maxAmount > 0 && maxAmount >= game.currentBet;
   const canDie = game.currentBet > 0;
 
   if (game.botId) {
@@ -160,6 +156,14 @@ function setGameExpiry(games, gameId, ms = 10 * 60 * 1000) {
   }, ms);
 }
 
+function hasActiveGame(games, userId) {
+  for (const g of games.values()) {
+    if (g?.ended) continue;
+    if (g.challengerId === userId || g.opponentId === userId) return true;
+  }
+  return false;
+}
+
 export async function handleCommand(interaction, ctx) {
   const { games } = ctx;
 
@@ -241,8 +245,9 @@ export async function handleCommand(interaction, ctx) {
       const opponent = interaction.options.getUser("상대");
       const baseInput = interaction.options.getInteger("기본금");
       const baseAmount = baseInput ?? 1000;
+      const userId = interaction.user.id;
 
-      if (opponent && opponent.id === interaction.user.id) {
+      if (opponent && opponent.id === userId) {
         await interaction.reply({
           ephemeral: true,
           embeds: [
@@ -260,6 +265,24 @@ export async function handleCommand(interaction, ctx) {
         return;
       }
 
+      if (hasActiveGame(games, userId)) {
+        await interaction.reply({
+          ephemeral: true,
+          embeds: [errorEmbed("이미 게임 중", "진행 중인 섯다 게임이 있어!")],
+        });
+        return;
+      }
+
+      if (opponent && hasActiveGame(games, opponent.id)) {
+        await interaction.reply({
+          ephemeral: true,
+          embeds: [
+            errorEmbed("상대 게임 중", "상대가 이미 다른 섯다 게임 중이야!"),
+          ],
+        });
+        return;
+      }
+
       if (baseAmount < 1000) {
         await interaction.reply({
           ephemeral: true,
@@ -270,7 +293,7 @@ export async function handleCommand(interaction, ctx) {
         return;
       }
 
-      const challengerBalance = await getBalance(interaction.user.id);
+      const challengerBalance = await getBalance(userId);
       if (challengerBalance < baseAmount) {
         await interaction.reply({
           ephemeral: true,
@@ -287,7 +310,7 @@ export async function handleCommand(interaction, ctx) {
       const game = createGame({
         id: gameId,
         channelId: interaction.channelId,
-        challengerId: interaction.user.id,
+        challengerId: userId,
         opponentId: opponent ? opponent.id : null,
       });
       game.baseAmount = baseAmount;
@@ -295,15 +318,15 @@ export async function handleCommand(interaction, ctx) {
       // 솔로면 즉시 시작
       if (!opponent) {
         game.botUserId = interaction.client.user?.id ?? null;
-        await addBalance(interaction.user.id, -baseAmount);
+        await addBalance(userId, -baseAmount);
         game.pot = baseAmount * 2;
-        startGame(game, interaction.user.id, "AI");
+        startGame(game, userId, "AI");
         games.set(gameId, game);
         setGameExpiry(games, gameId);
 
         const payload = buildActiveGameMessage(game);
         addBalancesToPayload(payload, game, {
-          [interaction.user.id]: challengerBalance - baseAmount,
+          [userId]: challengerBalance - baseAmount,
         });
         payload.components = buildInitialBettingComponents(
           game,

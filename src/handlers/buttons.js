@@ -369,6 +369,11 @@ export async function handleButton(
         ephemeral: true,
         embeds: [infoEmbed("🎴 섯다 족보", rulesText)],
       });
+      setTimeout(() => {
+        if (interaction.deferred || interaction.replied) {
+          interaction.deleteReply().catch(() => {});
+        }
+      }, 10_000);
       return;
     }
 
@@ -482,6 +487,11 @@ export async function handleButton(
         ephemeral: true,
         embeds: [buildHandEmbed(player)],
       });
+      setTimeout(() => {
+        if (interaction.deferred || interaction.replied) {
+          interaction.deleteReply().catch(() => {});
+        }
+      }, 10_000);
       return;
     }
 
