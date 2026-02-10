@@ -145,7 +145,9 @@ function buildBettingComponents(game, balances) {
   const canCheck = game.currentBet === 0;
   const canCall = game.currentBet > 0 && currentBalance >= callAmount;
   const canQuarter =
-    game.currentBet === 0 && currentBalance >= quarterAmount && quarterAmount > 0;
+    game.currentBet === 0 &&
+    currentBalance >= quarterAmount &&
+    quarterAmount > 0;
   const canHalf =
     game.currentBet === 0 && currentBalance >= halfAmount && halfAmount > 0;
   const canMax =
@@ -313,7 +315,13 @@ async function renderActive(interaction, game) {
   await interaction.update(payload);
 }
 
-export async function handleButton(interaction, action, gameId, ctx, subAction) {
+export async function handleButton(
+  interaction,
+  action,
+  gameId,
+  ctx,
+  subAction,
+) {
   const { games } = ctx;
 
   const game = games.get(gameId);
@@ -338,7 +346,9 @@ export async function handleButton(interaction, action, gameId, ctx, subAction) 
   switch (action) {
     case "seotda_rules": {
       const player =
-        game.state === "active" ? safeGetPlayer(game, interaction.user.id) : null;
+        game.state === "active"
+          ? safeGetPlayer(game, interaction.user.id)
+          : null;
       const rulesText = buildSeotdaRulesText(player?.rank?.name ?? null);
       await safeReply(interaction, {
         ephemeral: true,
@@ -498,7 +508,9 @@ export async function handleButton(interaction, action, gameId, ctx, subAction) 
       if (game.botId && ["call", "die"].includes(actionName)) {
         await safeReply(interaction, {
           ephemeral: true,
-          embeds: [errorEmbed("동작 불가", "AI전에서는 체크/쿼터/하프/올인만 가능해!")],
+          embeds: [
+            errorEmbed("동작 불가", "AI전에서는 체크/쿼터/하프/올인만 가능해!"),
+          ],
         });
         return;
       }
@@ -511,7 +523,10 @@ export async function handleButton(interaction, action, gameId, ctx, subAction) 
         return;
       }
 
-      if (["quarter", "half", "max"].includes(actionName) && game.currentBet > 0) {
+      if (
+        ["quarter", "half", "max"].includes(actionName) &&
+        game.currentBet > 0
+      ) {
         await safeReply(interaction, {
           ephemeral: true,
           embeds: [errorEmbed("베팅 불가", "이미 베팅이 진행 중이야!")],
@@ -539,7 +554,9 @@ export async function handleButton(interaction, action, gameId, ctx, subAction) 
         ) {
           await safeReply(interaction, {
             ephemeral: true,
-            embeds: [errorEmbed("잔액 부족", "보유금이 부족해서 베팅할 수 없어!")],
+            embeds: [
+              errorEmbed("잔액 부족", "보유금이 부족해서 베팅할 수 없어!"),
+            ],
           });
           return;
         }
@@ -570,7 +587,9 @@ export async function handleButton(interaction, action, gameId, ctx, subAction) 
       ) {
         await safeReply(interaction, {
           ephemeral: true,
-          embeds: [errorEmbed("잔액 부족", "보유금이 부족해서 베팅할 수 없어!")],
+          embeds: [
+            errorEmbed("잔액 부족", "보유금이 부족해서 베팅할 수 없어!"),
+          ],
         });
         return;
       }
@@ -606,27 +625,30 @@ export async function handleButton(interaction, action, gameId, ctx, subAction) 
         const resultLines = [];
         if (result.endType === "showdown" && outcome) {
           if (outcome.result === "draw") {
-            resultLines.push(`🤝 무승부: 각자 +${formatMoney(outcome.delta)}원`);
-          } else if (outcome.result === "win" && outcome.winner && outcome.loser) {
-            resultLines.push(`🏆 승자: ${outcome.winner.label}`);
-            resultLines.push(`😿 패자: ${outcome.loser.label}`);
             resultLines.push(
-              `변동: 승자 +${formatMoney(outcome.delta)}원 / 패자 -${formatMoney(
-                outcome.delta,
-              )}원`,
+              `🤝 무승부: 각자 +${formatMoney(outcome.delta)}원`,
+            );
+          } else if (
+            outcome.result === "win" &&
+            outcome.winner &&
+            outcome.loser
+          ) {
+            resultLines.push(
+              `🏆 승자: ${outcome.winner.label} +${formatMoney(outcome.delta)}원`,
+            );
+            resultLines.push(
+              `😿 패자: ${outcome.loser.label} -${formatMoney(outcome.delta)}원`,
             );
           }
         }
         if (result.endType === "die") {
-          resultLines.unshift(`🏳️ ${player.label} 다이`);
           if (outcome?.winnerId) {
             const winnerLabel = game.players[outcome.winnerId]?.label ?? "승자";
-            resultLines.push(`🏆 승자: ${winnerLabel}`);
-            resultLines.push(`😿 패자: ${player.label}`);
             resultLines.push(
-              `변동: 승자 +${formatMoney(outcome.delta)}원 / 패자 -${formatMoney(
-                outcome.delta,
-              )}원`,
+              `🏆 승자: ${winnerLabel} +${formatMoney(outcome.delta)}원`,
+            );
+            resultLines.push(
+              `😿 패자: ${player.label} -${formatMoney(outcome.delta)}원`,
             );
           }
         }
@@ -667,24 +689,27 @@ export async function handleButton(interaction, action, gameId, ctx, subAction) 
               outcome.winner &&
               outcome.loser
             ) {
-              resultLines.push(`🏆 승자: ${outcome.winner.label}`);
-              resultLines.push(`😿 패자: ${outcome.loser.label}`);
               resultLines.push(
-                `변동: 승자 +${formatMoney(outcome.delta)}원 / 패자 -${formatMoney(
+                `🏆 승자: ${outcome.winner.label} +${formatMoney(
+                  outcome.delta,
+                )}원`,
+              );
+              resultLines.push(
+                `😿 패자: ${outcome.loser.label} -${formatMoney(
                   outcome.delta,
                 )}원`,
               );
             }
           }
           if (aiResult.endType === "die") {
-            resultLines.unshift(`🏳️ ${game.players.AI.label} 다이`);
             if (outcome?.winnerId) {
               const winnerLabel =
                 game.players[outcome.winnerId]?.label ?? "승자";
-              resultLines.push(`🏆 승자: ${winnerLabel}`);
-              resultLines.push(`😿 패자: ${game.players.AI.label}`);
               resultLines.push(
-                `변동: 승자 +${formatMoney(outcome.delta)}원 / 패자 -${formatMoney(
+                `🏆 승자: ${winnerLabel} +${formatMoney(outcome.delta)}원`,
+              );
+              resultLines.push(
+                `😿 패자: ${game.players.AI.label} -${formatMoney(
                   outcome.delta,
                 )}원`,
               );

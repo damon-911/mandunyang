@@ -111,12 +111,6 @@ export function buildPendingMessage(game) {
       .setLabel("거절")
       .setStyle(ButtonStyle.Danger),
   );
-  const rulesRow = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`seotda_rules:${game.id}`)
-      .setLabel("족보")
-      .setStyle(ButtonStyle.Secondary),
-  );
 
   return {
     embeds: [
@@ -132,7 +126,7 @@ export function buildPendingMessage(game) {
         },
       ]),
     ],
-    components: [row, rulesRow],
+    components: [row],
   };
 }
 
@@ -195,7 +189,6 @@ export function buildHandEmbed(player) {
 
   return gameEmbed("🃏 내 패", [
     { name: "카드", value: `${c1} / ${c2}` },
-    { name: "", value: "" },
     { name: "패", value: `**${player.rank.name}**` },
   ]);
 }
@@ -223,7 +216,7 @@ export function buildResultUpdatePayload(game) {
         },
         {
           name: `플레이어 2`,
-          value: `{pB.label}\n${formatCard(pB.hand[0])} / ${formatCard(pB.hand[1])} → **${pB.rank.name}**`,
+          value: `${pB.label}\n${formatCard(pB.hand[0])} / ${formatCard(pB.hand[1])} → **${pB.rank.name}**`,
         },
         {
           name: "판돈",
