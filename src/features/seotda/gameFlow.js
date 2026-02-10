@@ -214,12 +214,10 @@ export function buildResultUpdatePayload(game) {
         {
           name: `플레이어 1`,
           value: `${pA.label}\n${formatCard(pA.hand[0])} / ${formatCard(pA.hand[1])} → **${pA.rank.name}**`,
-          inline: true,
         },
         {
           name: `플레이어 2`,
           value: `${pB.label}\n${formatCard(pB.hand[0])} / ${formatCard(pB.hand[1])} → **${pB.rank.name}**`,
-          inline: true,
         },
         {
           name: "판돈",
