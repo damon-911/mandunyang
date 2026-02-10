@@ -14,9 +14,9 @@ export function buildSeotdaRulesText(highlightName = null) {
     return labels.includes(highlightName) ? `👉 **${rangeText}**` : rangeText;
   };
 
-  const ddangLabels = [];
-  for (let n = 10; n >= 1; n -= 1) ddangLabels.push(`${n}땡`);
-  lines.push(highlightRanges(ddangLabels, "10땡 ~ 1땡"));
+  const ddangLabels = ["장땡"];
+  for (let n = 9; n >= 1; n -= 1) ddangLabels.push(`${n}땡`);
+  lines.push(highlightRanges(ddangLabels, "장땡 ~ 1땡"));
 
   const specialLabels = ["알리", "독사", "구삥", "장삥", "장사", "세륙"];
   for (const label of specialLabels) push(label);

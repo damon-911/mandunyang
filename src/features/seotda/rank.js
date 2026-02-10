@@ -14,7 +14,10 @@ export function getHandRank(c1, c2) {
   }
 
   // 땡 (10땡 > 9땡 > ... > 1땡)
-  if (a === b) return { value: 900 + a, name: `${a}땡` };
+  if (a === b) {
+    const name = a === 10 ? "장땡" : `${a}땡`;
+    return { value: 900 + a, name };
+  }
 
   // 특수패
   const special = {
