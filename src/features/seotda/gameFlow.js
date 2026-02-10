@@ -217,25 +217,21 @@ export function buildResultUpdatePayload(game) {
     embeds: [
       gameEmbed("🎴 섯다 결과", [
         {
-          name: "플레이어 1",
-          value: `${pA.label}\n${formatCard(pA.hand[0])}, ${formatCard(
-            pA.hand[1],
-          )} → **${pA.rank.name}**`,
+          name: `${pA.label}`,
+          value: `${formatCard(pA.hand[0])} / ${formatCard(pA.hand[1])} → **${pA.rank.name}**`,
           inline: false,
         },
         {
-          name: "플레이어 2",
-          value: `${pB.label}\n${formatCard(pB.hand[0])}, ${formatCard(
-            pB.hand[1],
-          )} → **${pB.rank.name}**`,
+          name: `\n${pB.label}`,
+          value: `${formatCard(pB.hand[0])} / ${formatCard(pB.hand[1])} → **${pB.rank.name}**`,
           inline: false,
         },
         {
-          name: "판돈",
+          name: "\n판돈",
           value: `${game.pot.toLocaleString("ko-KR")}원`,
-          inline: true,
+          inline: false,
         },
-        { name: "결과", value: result },
+        { name: "\n결과", value: result },
       ]),
     ],
   };

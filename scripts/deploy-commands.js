@@ -3,11 +3,6 @@ import { REST, Routes, SlashCommandBuilder } from "discord.js";
 
 const commands = [
   new SlashCommandBuilder()
-    .setName("핑")
-    .setDescription("만두냥 작동 테스트")
-    .toJSON(),
-
-  new SlashCommandBuilder()
     .setName("섯다")
     .setDescription("섯다 게임")
     .addIntegerOption((opt) =>
@@ -15,7 +10,7 @@ const commands = [
         .setName("기본금")
         .setDescription("기본금 (최소 1,000원)")
         .setMinValue(1000)
-        .setRequired(false),
+        .setRequired(true),
     )
     .addUserOption((opt) =>
       opt

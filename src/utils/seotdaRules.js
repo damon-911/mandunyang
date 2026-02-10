@@ -9,22 +9,23 @@ export function buildSeotdaRulesText(highlightName = null) {
   push("13광땡");
   push("18광땡");
 
-  for (let n = 10; n >= 1; n -= 1) {
-    push(`${n}땡`);
-  }
+  const highlightRanges = (labels, rangeText) => {
+    if (!highlightName) return rangeText;
+    return labels.includes(highlightName) ? `👉 **${rangeText}**` : rangeText;
+  };
 
-  push("알리");
-  push("독사");
-  push("구삥");
-  push("장삥");
-  push("장사");
-  push("세륙");
+  const ddangLabels = [];
+  for (let n = 10; n >= 1; n -= 1) ddangLabels.push(`${n}땡`);
+  lines.push(highlightRanges(ddangLabels, "10땡 ~ 1땡"));
 
-  for (let n = 9; n >= 1; n -= 1) {
-    push(`${n}끗`);
-  }
+  const specialLabels = ["알리", "독사", "구삥", "장삥", "장사", "세륙"];
+  for (const label of specialLabels) push(label);
+
+  const kkeutLabels = [];
+  for (let n = 9; n >= 1; n -= 1) kkeutLabels.push(`${n}끗`);
+  lines.push(highlightRanges(kkeutLabels, "9끗 ~ 1끗"));
+
   push("망통");
 
-  lines.push("뒷패 없음");
   return lines.join("\n");
 }

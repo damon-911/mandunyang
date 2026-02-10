@@ -21,6 +21,17 @@ import {
 
 const formatMoney = (amount) => Number(amount ?? 0).toLocaleString("ko-KR");
 
+function addBalancesToPayload(payload, game, balances) {
+  const lines = Object.values(game.players)
+    .filter((p) => p.id !== "AI")
+    .map((p) => `${p.label}: ${formatMoney(balances[p.id] ?? 0)}원`);
+  payload.embeds?.[0]?.addFields({
+    name: "보유금",
+    value: lines.join("\n"),
+    inline: false,
+  });
+}
+
 function buildInitialBettingComponents(game, balance) {
   const quarterAmount = Math.max(1, Math.floor(game.pot * 0.25));
   const halfAmount = Math.max(1, Math.floor(game.pot * 0.5));
@@ -42,7 +53,9 @@ function buildInitialBettingComponents(game, balance) {
       .setDisabled(disableAll || !canCheck),
     new ButtonBuilder()
       .setCustomId(`seotda_bet:${game.id}:call`)
-      .setLabel(`콜${game.currentBet ? `(${formatMoney(game.currentBet)})` : ""}`)
+      .setLabel(
+        `콜${game.currentBet ? `(${formatMoney(game.currentBet)})` : ""}`,
+      )
       .setStyle(ButtonStyle.Primary)
       .setDisabled(disableAll || !canCall),
     new ButtonBuilder()
@@ -92,11 +105,6 @@ export async function handleCommand(interaction, ctx) {
   const { games } = ctx;
 
   switch (interaction.commandName) {
-    case "핑": {
-      await interaction.reply({ embeds: [infoEmbed("핑", "퐁! 🏓")] });
-      return;
-    }
-
     case "출석체크": {
       const userId = interaction.user.id;
       const today = getKstDateString();
@@ -171,7 +179,7 @@ export async function handleCommand(interaction, ctx) {
     }
 
     case "섯다": {
-      const opponent = interaction.options.getUser("상대"); // 없으면 null
+      const opponent = interaction.options.getUser("상대");
       const baseInput = interaction.options.getInteger("기본금");
       const baseAmount = baseInput ?? 1000;
 
@@ -196,7 +204,9 @@ export async function handleCommand(interaction, ctx) {
       if (baseAmount < 1000) {
         await interaction.reply({
           ephemeral: true,
-          embeds: [errorEmbed("기본금 오류", "기본금은 최소 1,000원부터 가능해!")],
+          embeds: [
+            errorEmbed("기본금 오류", "기본금은 최소 1,000원부터 가능해!"),
+          ],
         });
         return;
       }
@@ -205,7 +215,9 @@ export async function handleCommand(interaction, ctx) {
       if (challengerBalance < baseAmount) {
         await interaction.reply({
           ephemeral: true,
-          embeds: [errorEmbed("잔액 부족", "보유금이 부족해서 기본금을 낼 수 없어!")],
+          embeds: [
+            errorEmbed("잔액 부족", "보유금이 부족해서 기본금을 낼 수 없어!"),
+          ],
         });
         return;
       }
@@ -231,7 +243,13 @@ export async function handleCommand(interaction, ctx) {
         setGameExpiry(games, gameId);
 
         const payload = buildActiveGameMessage(game);
-        payload.components = buildInitialBettingComponents(game, challengerBalance - baseAmount);
+        addBalancesToPayload(payload, game, {
+          [interaction.user.id]: challengerBalance - baseAmount,
+        });
+        payload.components = buildInitialBettingComponents(
+          game,
+          challengerBalance - baseAmount,
+        );
         await interaction.editReply(payload);
         return;
       }

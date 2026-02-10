@@ -32,6 +32,17 @@ function formatMoney(amount) {
   return Number(amount ?? 0).toLocaleString("ko-KR");
 }
 
+function addBalancesToPayload(payload, game, balances) {
+  const lines = Object.values(game.players)
+    .filter((p) => p.id !== "AI")
+    .map((p) => `${p.label}: ${formatMoney(balances[p.id] ?? 0)}원`);
+  payload.embeds?.[0]?.addFields({
+    name: "보유금",
+    value: lines.join("\n"),
+    inline: false,
+  });
+}
+
 async function getBalances(game) {
   const ids = Object.keys(game.players).filter((id) => id !== "AI");
   const rows = await Promise.all(
@@ -230,6 +241,7 @@ async function settleDie(game, loserId) {
 async function renderActive(interaction, game) {
   const balances = await getBalances(game);
   const payload = buildActiveGameMessage(game);
+  addBalancesToPayload(payload, game, balances);
   payload.components = buildBettingComponents(game, balances);
   await interaction.update(payload);
 }
