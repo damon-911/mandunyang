@@ -49,15 +49,15 @@ function buildInitialBettingComponents(game, balance) {
   const canQuarter =
     balance >= quarterRequired &&
     quarterAmount > 0 &&
-    quarterRequired >= game.currentBet;
+    quarterAmount >= game.currentBet;
   const canHalf =
     balance >= halfRequired &&
     halfAmount > 0 &&
-    halfRequired >= game.currentBet;
+    halfAmount >= game.currentBet;
   const canMax =
     balance >= maxRequired &&
     maxAmount > 0 &&
-    maxRequired >= game.currentBet;
+    maxAmount >= game.currentBet;
   const canDie = game.currentBet > 0;
 
   if (game.botId) {
