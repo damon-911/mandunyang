@@ -1,4 +1,9 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  inlineCode,
+} from "discord.js";
 
 import { createDeck, shuffle, draw, formatCard } from "./cards.js";
 import { getHandRank, compareHands } from "./rank.js";
@@ -116,7 +121,7 @@ export function buildPendingMessage(game) {
           name: "대결",
           value: `${challengerLabel} vs ${opponentLabel}`,
         },
-        { name: "기본금", value: baseText, inline: true },
+        { name: "기본금", value: baseText },
         {
           name: "안내",
           value: `👉 ${opponentLabel} 님이 **수락/거절**을 눌러주세요.`,
@@ -209,10 +214,12 @@ export function buildResultUpdatePayload(game) {
         {
           name: `플레이어 1`,
           value: `${pA.label}\n${formatCard(pA.hand[0])} / ${formatCard(pA.hand[1])} → **${pA.rank.name}**`,
+          inline: true,
         },
         {
           name: `플레이어 2`,
           value: `${pB.label}\n${formatCard(pB.hand[0])} / ${formatCard(pB.hand[1])} → **${pB.rank.name}**`,
+          inline: true,
         },
         {
           name: "판돈",
