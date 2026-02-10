@@ -77,6 +77,14 @@ function computeBetAmount(game, action, balances) {
   return 0;
 }
 
+function getRaiseAmount(game, action, balances) {
+  const base = computeBetAmount(game, action, balances);
+  if (action === "max" && game.currentBet > 0) {
+    return Math.max(0, base - game.currentBet);
+  }
+  return base;
+}
+
 function processBetAction(game, actorId, actionName, balances) {
   const actorBalance = getBalanceForId(balances, actorId);
   const otherId = getOtherPlayerId(game, actorId);
@@ -87,47 +95,47 @@ function processBetAction(game, actorId, actionName, balances) {
     }
     game.checksInRow += 1;
     if (game.checksInRow >= 2) {
-      return { endType: "showdown" };
+      return { endType: "showdown", required: 0 };
     }
     game.turnId = otherId;
-    return { endType: null };
+    return { endType: null, required: 0 };
   }
 
   if (actionName === "call") {
     if (game.currentBet <= 0) {
       return { error: "콜 불가: 받을 베팅이 없어!" };
     }
-    if (actorBalance < game.currentBet) {
+    const callAmount = game.currentBet;
+    if (actorBalance < callAmount) {
       return { error: "잔액 부족: 콜할 수 없어!" };
     }
-    game.pot += game.currentBet;
+    game.pot += callAmount;
     game.currentBet = 0;
     game.lastBetBy = null;
     game.checksInRow = 0;
-    return { endType: "showdown" };
+    return { endType: "showdown", required: callAmount };
   }
 
   if (actionName === "die") {
-    return { endType: "die", loserId: actorId };
+    return { endType: "die", loserId: actorId, required: 0 };
   }
 
   if (["quarter", "half", "max"].includes(actionName)) {
-    if (game.currentBet > 0) {
-      return { error: "베팅 불가: 이미 베팅이 진행 중이야!" };
-    }
-    const betAmount = computeBetAmount(game, actionName, balances);
-    if (betAmount <= 0) {
+    const raiseAmount = getRaiseAmount(game, actionName, balances);
+    if (raiseAmount <= 0) {
       return { error: "베팅 불가: 베팅 금액이 올바르지 않아!" };
     }
-    if (actorBalance < betAmount) {
+    const required =
+      game.currentBet > 0 ? game.currentBet + raiseAmount : raiseAmount;
+    if (actorBalance < required) {
       return { error: "잔액 부족: 베팅할 수 없어!" };
     }
-    game.pot += betAmount;
-    game.currentBet = betAmount;
+    game.pot += required;
+    game.currentBet = raiseAmount;
     game.lastBetBy = actorId;
     game.checksInRow = 0;
     game.turnId = otherId;
-    return { endType: null };
+    return { endType: null, required };
   }
 
   return { error: "알 수 없는 베팅" };
@@ -137,21 +145,22 @@ function buildBettingComponents(game, balances) {
   const currentId = game.turnId;
   const currentBalance = getBalanceForId(balances, currentId);
   const callAmount = game.currentBet;
-  const quarterAmount = computeBetAmount(game, "quarter", balances);
-  const halfAmount = computeBetAmount(game, "half", balances);
-  const maxAmount = computeBetAmount(game, "max", balances);
+  const quarterAmount = getRaiseAmount(game, "quarter", balances);
+  const halfAmount = getRaiseAmount(game, "half", balances);
+  const maxAmount = getRaiseAmount(game, "max", balances);
+  const quarterRequired =
+    game.currentBet > 0 ? game.currentBet + quarterAmount : quarterAmount;
+  const halfRequired =
+    game.currentBet > 0 ? game.currentBet + halfAmount : halfAmount;
+  const maxRequired =
+    game.currentBet > 0 ? game.currentBet + maxAmount : maxAmount;
 
   const disableAll = game.turnId === "AI";
   const canCheck = game.currentBet === 0;
   const canCall = game.currentBet > 0 && currentBalance >= callAmount;
-  const canQuarter =
-    game.currentBet === 0 &&
-    currentBalance >= quarterAmount &&
-    quarterAmount > 0;
-  const canHalf =
-    game.currentBet === 0 && currentBalance >= halfAmount && halfAmount > 0;
-  const canMax =
-    game.currentBet === 0 && currentBalance >= maxAmount && maxAmount > 0;
+  const canQuarter = currentBalance >= quarterRequired && quarterAmount > 0;
+  const canHalf = currentBalance >= halfRequired && halfAmount > 0;
+  const canMax = currentBalance >= maxRequired && maxAmount > 0;
   const canDie = game.currentBet > 0;
 
   if (game.botId) {
@@ -523,24 +532,15 @@ export async function handleButton(
         return;
       }
 
-      if (
-        ["quarter", "half", "max"].includes(actionName) &&
-        game.currentBet > 0
-      ) {
-        await safeReply(interaction, {
-          ephemeral: true,
-          embeds: [errorEmbed("베팅 불가", "이미 베팅이 진행 중이야!")],
-        });
-        return;
-      }
-
       const balances = await getBalances(game);
 
       if (game.botId) {
         const required =
           actionName === "check"
             ? 0
-            : computeBetAmount(game, actionName, balances);
+            : game.currentBet > 0
+              ? game.currentBet + getRaiseAmount(game, actionName, balances)
+              : getRaiseAmount(game, actionName, balances);
         if (required <= 0 && actionName !== "check") {
           await safeReply(interaction, {
             ephemeral: true,
@@ -565,32 +565,30 @@ export async function handleButton(
           game.pot += required;
         }
 
-        await settleShowdown(game);
+        const outcome = await settleShowdown(game);
         const payload = buildResultUpdatePayload(game);
+        const resultLines = [];
+        if (outcome?.result === "draw") {
+          resultLines.push(`🤝 무승부: 각자 +${formatMoney(outcome.delta)}원`);
+        } else if (outcome?.result === "win" && outcome.winner && outcome.loser) {
+          resultLines.push(
+            `🏆 승자: ${outcome.winner.label} +${formatMoney(outcome.delta)}원`,
+          );
+          resultLines.push(
+            `😿 패자: ${outcome.loser.label} -${formatMoney(outcome.delta)}원`,
+          );
+        }
+        if (resultLines.length > 0) {
+          payload.embeds?.[0]?.addFields({
+            name: "결과",
+            value: resultLines.join("\n"),
+            inline: false,
+          });
+        }
+        await addBalancesToResult(payload, game);
         game.ended = true;
         games.delete(gameId);
         await interaction.update(payload);
-        return;
-      }
-
-      const required =
-        actionName === "call"
-          ? game.currentBet
-          : ["quarter", "half", "max"].includes(actionName)
-            ? computeBetAmount(game, actionName, balances)
-            : 0;
-
-      if (
-        required > 0 &&
-        interaction.user.id !== "AI" &&
-        getBalanceForId(balances, interaction.user.id) < required
-      ) {
-        await safeReply(interaction, {
-          ephemeral: true,
-          embeds: [
-            errorEmbed("잔액 부족", "보유금이 부족해서 베팅할 수 없어!"),
-          ],
-        });
         return;
       }
 
@@ -608,6 +606,7 @@ export async function handleButton(
         return;
       }
 
+      const required = result.required ?? 0;
       if (required > 0 && interaction.user.id !== "AI") {
         await addBalance(interaction.user.id, -required);
         balances[interaction.user.id] -= required;

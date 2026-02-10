@@ -222,7 +222,6 @@ export function buildResultUpdatePayload(game) {
           name: "판돈",
           value: `${game.pot.toLocaleString("ko-KR")}원`,
         },
-        { name: "결과", value: result },
       ]),
     ],
   };
