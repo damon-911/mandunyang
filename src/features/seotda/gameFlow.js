@@ -27,8 +27,6 @@ export function createGame({ id, channelId, challengerId, opponentId }) {
     players: {},
     baseAmount: 0,
     pot: 0,
-    round: 1,
-    maxRounds: 3,
     currentBet: 0,
     lastBetBy: null,
     checksInRow: 0,
@@ -88,7 +86,6 @@ export function startGame(game, p1Id, opponentUserIdOrAI) {
   }
 
   game.state = "active";
-  game.round = 1;
   game.currentBet = 0;
   game.lastBetBy = null;
   game.checksInRow = 0;
@@ -151,11 +148,6 @@ export function buildActiveGameMessage(game) {
         ...(game.botId
           ? []
           : [
-              {
-                name: "라운드",
-                value: `${game.round} / ${game.maxRounds}`,
-                inline: true,
-              },
               {
                 name: "차례",
                 value:

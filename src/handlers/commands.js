@@ -36,13 +36,28 @@ function buildInitialBettingComponents(game, balance) {
   const quarterAmount = Math.max(1, Math.floor(game.pot * 0.25));
   const halfAmount = Math.max(1, Math.floor(game.pot * 0.5));
   const maxAmount = Math.max(0, balance);
+  const quarterRequired =
+    game.currentBet > 0 ? game.currentBet + quarterAmount : quarterAmount;
+  const halfRequired =
+    game.currentBet > 0 ? game.currentBet + halfAmount : halfAmount;
+  const maxRequired =
+    game.currentBet > 0 ? game.currentBet + maxAmount : maxAmount;
 
   const disableAll = game.turnId === "AI";
   const canCheck = game.currentBet === 0;
   const canCall = game.currentBet > 0 && balance >= game.currentBet;
-  const canQuarter = game.currentBet === 0 && balance >= quarterAmount;
-  const canHalf = game.currentBet === 0 && balance >= halfAmount;
-  const canMax = game.currentBet === 0 && balance >= maxAmount && maxAmount > 0;
+  const canQuarter =
+    balance >= quarterRequired &&
+    quarterAmount > 0 &&
+    quarterRequired >= game.currentBet;
+  const canHalf =
+    balance >= halfRequired &&
+    halfAmount > 0 &&
+    halfRequired >= game.currentBet;
+  const canMax =
+    balance >= maxRequired &&
+    maxAmount > 0 &&
+    maxRequired >= game.currentBet;
   const canDie = game.currentBet > 0;
 
   if (game.botId) {

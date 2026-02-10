@@ -158,9 +158,18 @@ function buildBettingComponents(game, balances) {
   const disableAll = game.turnId === "AI";
   const canCheck = game.currentBet === 0;
   const canCall = game.currentBet > 0 && currentBalance >= callAmount;
-  const canQuarter = currentBalance >= quarterRequired && quarterAmount > 0;
-  const canHalf = currentBalance >= halfRequired && halfAmount > 0;
-  const canMax = currentBalance >= maxRequired && maxAmount > 0;
+  const canQuarter =
+    currentBalance >= quarterRequired &&
+    quarterAmount > 0 &&
+    quarterRequired >= callAmount;
+  const canHalf =
+    currentBalance >= halfRequired &&
+    halfAmount > 0 &&
+    halfRequired >= callAmount;
+  const canMax =
+    currentBalance >= maxRequired &&
+    maxAmount > 0 &&
+    maxRequired >= callAmount;
   const canDie = game.currentBet > 0;
 
   if (game.botId) {
@@ -566,14 +575,10 @@ export async function handleButton(
         const payload = buildResultUpdatePayload(game);
         const resultLines = [];
         if (outcome?.result === "draw") {
-          resultLines.push(`🤝 무승부: 각자 +${formatMoney(outcome.delta)}원`);
+          resultLines.push("🤝 무승부");
         } else if (outcome?.result === "win" && outcome.winner && outcome.loser) {
-          resultLines.push(
-            `🏆 승자: ${outcome.winner.label} +${formatMoney(outcome.delta)}원`,
-          );
-          resultLines.push(
-            `😿 패자: ${outcome.loser.label} -${formatMoney(outcome.delta)}원`,
-          );
+          resultLines.push(`🏆 승자: ${outcome.winner.label}`);
+          resultLines.push(`😿 패자: ${outcome.loser.label}`);
         }
         if (resultLines.length > 0) {
           payload.embeds?.[0]?.addFields({
