@@ -28,6 +28,18 @@ async function safeReply(interaction, payload) {
   }
 }
 
+async function safeErrorReply(interaction, payload, ttlMs = 5000) {
+  const res = await safeReply(interaction, payload);
+  if (payload?.ephemeral) {
+    setTimeout(() => {
+      if (interaction.deferred || interaction.replied) {
+        interaction.deleteReply().catch(() => {});
+      }
+    }, ttlMs);
+  }
+  return res;
+}
+
 function formatMoney(amount) {
   return Number(amount ?? 0).toLocaleString("ko-KR");
 }
@@ -341,7 +353,7 @@ export async function handleButton(
 
   const game = games.get(gameId);
   if (!game || game.ended) {
-    await safeReply(interaction, {
+    await safeErrorReply(interaction, {
       ephemeral: true,
       embeds: [errorEmbed("만료됨", "이 게임은 이미 끝났거나 만료됐어 😿")],
     });
@@ -349,7 +361,7 @@ export async function handleButton(
   }
 
   if (interaction.channelId !== game.channelId) {
-    await safeReply(interaction, {
+    await safeErrorReply(interaction, {
       ephemeral: true,
       embeds: [
         errorEmbed("조작 불가", "이 게임이 시작된 채널에서만 조작할 수 있어!"),
@@ -380,7 +392,7 @@ export async function handleButton(
     // --- 수락/거절 ---
     case "seotda_accept": {
       if (game.state !== "pending") {
-        await safeReply(interaction, {
+        await safeErrorReply(interaction, {
           ephemeral: true,
           embeds: [
             errorEmbed("요청 불가", "이미 진행 중이거나 종료된 요청이야!"),
@@ -389,7 +401,7 @@ export async function handleButton(
         return;
       }
       if (interaction.user.id !== game.opponentId) {
-        await safeReply(interaction, {
+        await safeErrorReply(interaction, {
           ephemeral: true,
           embeds: [errorEmbed("권한 없음", "상대만 수락할 수 있어!")],
         });
@@ -431,7 +443,7 @@ export async function handleButton(
 
     case "seotda_decline": {
       if (game.state !== "pending") {
-        await safeReply(interaction, {
+        await safeErrorReply(interaction, {
           ephemeral: true,
           embeds: [
             errorEmbed("요청 불가", "이미 진행 중이거나 종료된 요청이야!"),
@@ -440,7 +452,7 @@ export async function handleButton(
         return;
       }
       if (interaction.user.id !== game.opponentId) {
-        await safeReply(interaction, {
+        await safeErrorReply(interaction, {
           ephemeral: true,
           embeds: [errorEmbed("권한 없음", "상대만 거절할 수 있어!")],
         });
@@ -465,7 +477,7 @@ export async function handleButton(
     // --- 진행 단계 ---
     case "seotda_check": {
       if (game.state !== "active") {
-        await safeReply(interaction, {
+        await safeErrorReply(interaction, {
           ephemeral: true,
           embeds: [errorEmbed("대기 중", "아직 수락 대기 중이야!")],
         });
@@ -474,7 +486,7 @@ export async function handleButton(
 
       const player = safeGetPlayer(game, interaction.user.id);
       if (!player) {
-        await safeReply(interaction, {
+        await safeErrorReply(interaction, {
           ephemeral: true,
           embeds: [errorEmbed("권한 없음", "이 게임 참가자만 누를 수 있어!")],
         });
@@ -497,7 +509,7 @@ export async function handleButton(
 
     case "seotda_bet": {
       if (game.state !== "active") {
-        await safeReply(interaction, {
+        await safeErrorReply(interaction, {
           ephemeral: true,
           embeds: [errorEmbed("대기 중", "아직 수락 대기 중이야!")],
         });
@@ -506,7 +518,7 @@ export async function handleButton(
 
       const player = safeGetPlayer(game, interaction.user.id);
       if (!player) {
-        await safeReply(interaction, {
+        await safeErrorReply(interaction, {
           ephemeral: true,
           embeds: [errorEmbed("권한 없음", "이 게임 참가자만 누를 수 있어!")],
         });
@@ -514,7 +526,7 @@ export async function handleButton(
       }
 
       if (interaction.user.id !== game.turnId) {
-        await safeReply(interaction, {
+        await safeErrorReply(interaction, {
           ephemeral: true,
           embeds: [errorEmbed("차례 아님", "지금은 네 차례가 아니야!")],
         });
@@ -523,7 +535,7 @@ export async function handleButton(
 
       const actionName = subAction;
       if (!actionName) {
-        await safeReply(interaction, {
+        await safeErrorReply(interaction, {
           ephemeral: true,
           embeds: [errorEmbed("잘못된 요청", "알 수 없는 베팅 동작이야!")],
         });
@@ -531,7 +543,7 @@ export async function handleButton(
       }
 
       if (game.botId && ["call", "die"].includes(actionName)) {
-        await safeReply(interaction, {
+        await safeErrorReply(interaction, {
           ephemeral: true,
           embeds: [
             errorEmbed("동작 불가", "AI전에서는 체크/쿼터/하프/올인만 가능해!"),
@@ -541,7 +553,7 @@ export async function handleButton(
       }
 
       if (actionName === "call" && game.currentBet <= 0) {
-        await safeReply(interaction, {
+        await safeErrorReply(interaction, {
           ephemeral: true,
           embeds: [errorEmbed("콜 불가", "받을 베팅이 없어!")],
         });
@@ -558,7 +570,7 @@ export async function handleButton(
               ? game.currentBet + getRaiseAmount(game, actionName, balances)
               : getRaiseAmount(game, actionName, balances);
         if (required <= 0 && actionName !== "check") {
-          await safeReply(interaction, {
+          await safeErrorReply(interaction, {
             ephemeral: true,
             embeds: [errorEmbed("베팅 불가", "베팅 금액이 올바르지 않아!")],
           });
@@ -568,7 +580,7 @@ export async function handleButton(
           actionName !== "check" &&
           getBalanceForId(balances, interaction.user.id) < required
         ) {
-          await safeReply(interaction, {
+          await safeErrorReply(interaction, {
             ephemeral: true,
             embeds: [
               errorEmbed("잔액 부족", "보유금이 부족해서 베팅할 수 없어!"),
@@ -611,7 +623,7 @@ export async function handleButton(
         balances,
       );
       if (result.error) {
-        await safeReply(interaction, {
+        await safeErrorReply(interaction, {
           ephemeral: true,
           embeds: [errorEmbed("베팅 오류", result.error)],
         });
@@ -720,7 +732,7 @@ export async function handleButton(
     }
 
     default: {
-      await safeReply(interaction, {
+      await safeErrorReply(interaction, {
         ephemeral: true,
         embeds: [errorEmbed("알 수 없는 버튼", "처리할 수 없는 버튼이야!")],
       });

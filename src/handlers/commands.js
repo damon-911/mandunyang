@@ -167,6 +167,17 @@ function hasActiveGame(games, userId) {
 export async function handleCommand(interaction, ctx) {
   const { games } = ctx;
 
+  async function errorReply(payload) {
+    await interaction.reply(payload);
+    if (payload?.ephemeral) {
+      setTimeout(() => {
+        if (interaction.deferred || interaction.replied) {
+          interaction.deleteReply().catch(() => {});
+        }
+      }, 5000);
+    }
+  }
+
   switch (interaction.commandName) {
     case "출석체크": {
       const userId = interaction.user.id;
@@ -175,7 +186,7 @@ export async function handleCommand(interaction, ctx) {
 
       if (!(await canAttend(userId, today))) {
         const user = await getUser(userId);
-        await interaction.reply({
+        await errorReply({
           ephemeral: true,
           embeds: [
             errorEmbed("이미 출석했어!", `오늘은 이미 출석체크를 했어 😼`),
@@ -248,7 +259,7 @@ export async function handleCommand(interaction, ctx) {
       const userId = interaction.user.id;
 
       if (opponent && opponent.id === userId) {
-        await interaction.reply({
+        await errorReply({
           ephemeral: true,
           embeds: [
             errorEmbed("잘못된 대결", "자기 자신과는 대결할 수 없어 😅"),
@@ -258,7 +269,7 @@ export async function handleCommand(interaction, ctx) {
       }
 
       if (opponent && opponent.bot) {
-        await interaction.reply({
+        await errorReply({
           ephemeral: true,
           embeds: [errorEmbed("잘못된 상대", "봇이 아닌 사람을 태그해줘!")],
         });
@@ -266,7 +277,7 @@ export async function handleCommand(interaction, ctx) {
       }
 
       if (hasActiveGame(games, userId)) {
-        await interaction.reply({
+        await errorReply({
           ephemeral: true,
           embeds: [errorEmbed("이미 게임 중", "진행 중인 섯다 게임이 있어!")],
         });
@@ -274,7 +285,7 @@ export async function handleCommand(interaction, ctx) {
       }
 
       if (opponent && hasActiveGame(games, opponent.id)) {
-        await interaction.reply({
+        await errorReply({
           ephemeral: true,
           embeds: [
             errorEmbed("상대 게임 중", "상대가 이미 다른 섯다 게임 중이야!"),
@@ -284,7 +295,7 @@ export async function handleCommand(interaction, ctx) {
       }
 
       if (baseAmount < 1000) {
-        await interaction.reply({
+        await errorReply({
           ephemeral: true,
           embeds: [
             errorEmbed("기본금 오류", "기본금은 최소 1,000원부터 가능해!"),
@@ -295,7 +306,7 @@ export async function handleCommand(interaction, ctx) {
 
       const challengerBalance = await getBalance(userId);
       if (challengerBalance < baseAmount) {
-        await interaction.reply({
+        await errorReply({
           ephemeral: true,
           embeds: [
             errorEmbed("잔액 부족", "보유금이 부족해서 기본금을 낼 수 없어!"),
@@ -345,7 +356,7 @@ export async function handleCommand(interaction, ctx) {
     }
 
     default: {
-      await interaction.reply({
+      await errorReply({
         ephemeral: true,
         embeds: [errorEmbed("알 수 없는 명령어", "등록되지 않은 명령어야!")],
       });
