@@ -366,6 +366,11 @@ export async function handleCommand(interaction, ctx) {
             await interaction.editReply({
               content: `😺 만두냥이 섯다방을 열었어! 여기로 이동해줘: <#${gameChannel.id}>`,
             });
+            setTimeout(() => {
+              if (interaction.deferred || interaction.replied) {
+                interaction.deleteReply().catch(() => { });
+              }
+            }, 10_000);
           } else {
             await interaction.editReply({ content: "게임을 시작했어!" });
           }
@@ -385,6 +390,11 @@ export async function handleCommand(interaction, ctx) {
           await interaction.editReply({
             content: `😺 만두냥이 섯다방을 열었어! 여기로 이동해줘: <#${gameChannel.id}>`,
           });
+          setTimeout(() => {
+            if (interaction.deferred || interaction.replied) {
+              interaction.deleteReply().catch(() => { });
+            }
+          }, 10_000);
         } else {
           await interaction.editReply({ content: "게임을 시작했어!" });
         }
@@ -400,6 +410,11 @@ export async function handleCommand(interaction, ctx) {
         await interaction.editReply({
           content: `😺 만두냥이 섯다방을 열었어! 여기로 이동해줘: <#${gameChannel.id}>`,
         });
+        setTimeout(() => {
+          if (interaction.deferred || interaction.replied) {
+            interaction.deleteReply().catch(() => { });
+          }
+        }, 10_000);
       } else {
         await interaction.editReply({ content: "대결 신청을 보냈어!" });
       }
