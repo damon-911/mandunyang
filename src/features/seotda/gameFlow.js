@@ -18,6 +18,31 @@ function getBotLabel(game) {
   return game.botUserId ? `<@${game.botUserId}>` : "만두냥";
 }
 
+function formatActionLabel(action) {
+  const labels = {
+    check: "체크",
+    call: "콜",
+    die: "다이",
+    quarter: "쿼터",
+    half: "하프",
+    max: "맥스",
+  };
+  return labels[action] ?? action ?? "알 수 없음";
+}
+
+function formatLastAction(game) {
+  const last = game.lastAction;
+  if (!last) return "없음";
+  const who =
+    last.playerId === "AI" ? getBotLabel(game) : getPlayerLabel(last.playerId);
+  const label = formatActionLabel(last.action);
+  const amount =
+    last.amount && last.amount > 0
+      ? ` (+${last.amount.toLocaleString("ko-KR")}원)`
+      : "";
+  return `${who} · ${label}${amount}`;
+}
+
 export function createGame({ id, channelId, challengerId, opponentId }) {
   return {
     id,
@@ -33,6 +58,7 @@ export function createGame({ id, channelId, challengerId, opponentId }) {
     baseAmount: 0,
     pot: 0,
     currentBet: 0,
+    lastAction: null,
     lastBetBy: null,
     checksInRow: 0,
     turnId: challengerId,
@@ -95,6 +121,7 @@ export function startGame(game, p1Id, opponentUserIdOrAI) {
 
   game.state = "active";
   game.currentBet = 0;
+  game.lastAction = null;
   game.lastBetBy = null;
   game.checksInRow = 0;
 }
@@ -166,6 +193,11 @@ export function buildActiveGameMessage(game) {
             game.currentBet > 0
               ? `${game.currentBet.toLocaleString("ko-KR")}원`
               : "없음",
+          inline: true,
+        },
+        {
+          name: "직전 행동",
+          value: formatLastAction(game),
           inline: true,
         },
         {

@@ -106,6 +106,7 @@ function processBetAction(game, actorId, actionName, balances) {
       return { error: "체크 불가: 이미 베팅이 진행 중이야!" };
     }
     game.checksInRow += 1;
+    game.lastAction = { playerId: actorId, action: actionName, amount: 0 };
     if (game.checksInRow >= 2) {
       return { endType: "showdown", required: 0 };
     }
@@ -123,12 +124,18 @@ function processBetAction(game, actorId, actionName, balances) {
     }
     game.pot += callAmount;
     game.currentBet = 0;
+    game.lastAction = {
+      playerId: actorId,
+      action: actionName,
+      amount: callAmount,
+    };
     game.lastBetBy = null;
     game.checksInRow = 0;
     return { endType: "showdown", required: callAmount };
   }
 
   if (actionName === "die") {
+    game.lastAction = { playerId: actorId, action: actionName, amount: 0 };
     return { endType: "die", loserId: actorId, required: 0 };
   }
 
@@ -144,6 +151,11 @@ function processBetAction(game, actorId, actionName, balances) {
     }
     game.pot += required;
     game.currentBet = raiseAmount;
+    game.lastAction = {
+      playerId: actorId,
+      action: actionName,
+      amount: required,
+    };
     game.lastBetBy = actorId;
     game.checksInRow = 0;
     game.turnId = otherId;
@@ -592,6 +604,11 @@ export async function handleButton(
           await addBalance(interaction.user.id, -required);
           game.pot += required;
         }
+        game.lastAction = {
+          playerId: interaction.user.id,
+          action: actionName,
+          amount: required,
+        };
 
         const outcome = await settleShowdown(game);
         const payload = buildResultUpdatePayload(game);
