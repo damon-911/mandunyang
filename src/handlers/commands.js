@@ -29,7 +29,6 @@ function addBalancesToPayload(payload, game, balances) {
   payload.embeds?.[0]?.addFields({
     name: "보유금",
     value: lines.join("\n"),
-    inline: false,
   });
 }
 
@@ -123,11 +122,11 @@ function setGameExpiry(games, game, ms = 5 * 60 * 1000) {
             setTimeout(() => {
               g._timeoutNoticeChannel
                 ?.delete("Seotda game timed out")
-                .catch(() => { });
+                .catch(() => {});
             }, 10_000);
           }
         })
-        .catch(() => { });
+        .catch(() => {});
     }
   }, ms);
 }
@@ -140,7 +139,7 @@ function hasActiveGame(games, userId) {
   return false;
 }
 
-async function ensureGameChannel(interaction, gameId, opponent) {
+async function ensureGameChannel(interaction, opponent) {
   const baseChannel = interaction.channel;
   if (!baseChannel) return null;
   if (baseChannel.isThread?.()) return baseChannel;
@@ -159,10 +158,8 @@ async function ensureGameChannel(interaction, gameId, opponent) {
     });
     if (opponent) {
       baseChannel
-        .send(
-          `😺 만두냥이 섯다방을 열었어! 여기로 이동해줘: <#${thread.id}>`,
-        )
-        .catch(() => { });
+        .send(`😺 만두냥이 섯다방을 열었어! 여기로 이동해줘: <#${thread.id}>`)
+        .catch(() => {});
     }
     return thread;
   } catch {
@@ -178,7 +175,7 @@ export async function handleCommand(interaction, ctx) {
     if (payload?.ephemeral) {
       setTimeout(() => {
         if (interaction.deferred || interaction.replied) {
-          interaction.deleteReply().catch(() => { });
+          interaction.deleteReply().catch(() => {});
         }
       }, 5000);
     }
@@ -332,11 +329,7 @@ export async function handleCommand(interaction, ctx) {
       });
       game.baseAmount = baseAmount;
 
-      const gameChannel = await ensureGameChannel(
-        interaction,
-        gameId,
-        opponent,
-      );
+      const gameChannel = await ensureGameChannel(interaction, opponent);
       if (!gameChannel) {
         await interaction.editReply({
           content: "채널 정보를 가져오지 못했어. 다시 시도해줘!",
@@ -368,7 +361,7 @@ export async function handleCommand(interaction, ctx) {
             });
             setTimeout(() => {
               if (interaction.deferred || interaction.replied) {
-                interaction.deleteReply().catch(() => { });
+                interaction.deleteReply().catch(() => {});
               }
             }, 10_000);
           } else {
@@ -392,7 +385,7 @@ export async function handleCommand(interaction, ctx) {
           });
           setTimeout(() => {
             if (interaction.deferred || interaction.replied) {
-              interaction.deleteReply().catch(() => { });
+              interaction.deleteReply().catch(() => {});
             }
           }, 10_000);
         } else {
@@ -406,18 +399,7 @@ export async function handleCommand(interaction, ctx) {
       setGameExpiry(games, game);
 
       await gameChannel.send(buildPendingMessage(game));
-      if (gameChannel.id !== interaction.channelId) {
-        await interaction.editReply({
-          content: `😺 만두냥이 섯다방을 열었어! 여기로 이동해줘: <#${gameChannel.id}>`,
-        });
-        setTimeout(() => {
-          if (interaction.deferred || interaction.replied) {
-            interaction.deleteReply().catch(() => { });
-          }
-        }, 10_000);
-      } else {
-        await interaction.editReply({ content: "대결 신청을 보냈어!" });
-      }
+      await interaction.editReply({ content: "대결 신청을 보냈어!" });
       return;
     }
 
