@@ -44,6 +44,40 @@ function formatMoney(amount) {
   return Number(amount ?? 0).toLocaleString("ko-KR");
 }
 
+function formatActionLabel(action) {
+  const labels = {
+    check: "체크",
+    call: "콜",
+    die: "다이",
+    quarter: "쿼터",
+    half: "하프",
+    max: "맥스",
+  };
+  return labels[action] ?? action ?? "알 수 없음";
+}
+
+async function sendActionNotice(interaction, game, actorId, action, amount) {
+  const channel = interaction.channel;
+  if (!channel) return;
+
+  const actorLabel =
+    actorId === "AI"
+      ? game.players.AI?.label ?? "만두냥"
+      : game.players[actorId]?.label ?? "플레이어";
+  const actionLabel = formatActionLabel(action);
+  const amountText =
+    amount && amount > 0 ? ` (+${formatMoney(amount)}원)` : "";
+
+  try {
+    const msg = await channel.send(
+      `ℹ️ ${actorLabel} · ${actionLabel}${amountText}`,
+    );
+    setTimeout(() => {
+      msg.delete().catch(() => {});
+    }, 5000);
+  } catch {}
+}
+
 function addBalancesToPayload(payload, game, balances) {
   const lines = Object.values(game.players)
     .filter((p) => p.id !== "AI")
@@ -255,51 +289,56 @@ function decideAiAction(game) {
 
   if (game.currentBet > 0) {
     if (style === "aggressive") {
-      if (rankValue >= 1000) return roll < 0.55 ? "max" : "half";
+      // 3) 약패도 공격적으로 배팅 (다이 유도)
+      if (rankValue >= 1000) return roll < 0.65 ? "max" : "half";
+      if (rankValue >= 900) return roll < 0.7 ? "half" : "call";
+      if (rankValue >= 806) return roll < 0.8 ? "call" : "quarter";
+      if (rankValue >= 105) return roll < 0.6 ? "call" : "quarter";
+      return aiFirstTurn ? "call" : "quarter";
+    }
+
+    if (style === "random") {
+      // 2) 중패에서도 공격적으로 배팅
+      if (rankValue >= 1000) return roll < 0.5 ? "max" : "half";
       if (rankValue >= 900) return roll < 0.6 ? "half" : "call";
-      if (rankValue >= 806) return roll < 0.75 ? "call" : "quarter";
-      if (rankValue >= 105) return roll < 0.45 ? "call" : "die";
+      if (rankValue >= 806) return roll < 0.7 ? "call" : "quarter";
+      if (rankValue >= 105) return roll < 0.35 ? "call" : "die";
       return aiFirstTurn ? "call" : "die";
     }
 
-    if (style === "conservative") {
-      if (rankValue >= 1000) return roll < 0.35 ? "half" : "call";
-      if (rankValue >= 900) return roll < 0.5 ? "call" : "die";
-      if (rankValue >= 806) return roll < 0.35 ? "call" : "die";
-      if (rankValue >= 105) return roll < 0.15 ? "call" : "die";
-      return aiFirstTurn ? "call" : "die";
-    }
-
-    // random
-    if (rankValue >= 1000) return roll < 0.3 ? "max" : "call";
-    if (rankValue >= 900) return roll < 0.4 ? "half" : "call";
-    if (rankValue >= 806) return roll < 0.5 ? "call" : "die";
-    if (rankValue >= 105) return roll < 0.2 ? "call" : "die";
+    // conservative
+    // 1) 강패에서만 공격적으로 배팅
+    if (rankValue >= 1000) return roll < 0.35 ? "half" : "call";
+    if (rankValue >= 900) return roll < 0.3 ? "call" : "die";
+    if (rankValue >= 806) return roll < 0.2 ? "call" : "die";
+    if (rankValue >= 105) return roll < 0.1 ? "call" : "die";
     return aiFirstTurn ? "call" : "die";
   }
 
   if (style === "aggressive") {
-    if (rankValue >= 1000) return roll < 0.75 ? "max" : "half";
-    if (rankValue >= 900) return roll < 0.7 ? "half" : "quarter";
-    if (rankValue >= 806) return roll < 0.7 ? "quarter" : "check";
-    if (rankValue >= 105) return roll < 0.4 ? "quarter" : "check";
-    return roll < 0.25 ? "quarter" : "check";
+    // 3) 약패도 공격적으로 배팅
+    if (rankValue >= 1000) return roll < 0.8 ? "max" : "half";
+    if (rankValue >= 900) return roll < 0.75 ? "half" : "quarter";
+    if (rankValue >= 806) return roll < 0.75 ? "quarter" : "check";
+    if (rankValue >= 105) return roll < 0.55 ? "quarter" : "check";
+    return roll < 0.4 ? "quarter" : "check";
   }
 
-  if (style === "conservative") {
-    if (rankValue >= 1000) return roll < 0.2 ? "half" : "check";
-    if (rankValue >= 900) return roll < 0.2 ? "quarter" : "check";
-    if (rankValue >= 806) return roll < 0.15 ? "quarter" : "check";
-    if (rankValue >= 105) return roll < 0.1 ? "quarter" : "check";
-    return "check";
+  if (style === "random") {
+    // 2) 중패에서도 공격적으로 배팅
+    if (rankValue >= 1000) return roll < 0.6 ? "max" : "half";
+    if (rankValue >= 900) return roll < 0.6 ? "half" : "quarter";
+    if (rankValue >= 806) return roll < 0.6 ? "quarter" : "check";
+    if (rankValue >= 105) return roll < 0.35 ? "quarter" : "check";
+    return roll < 0.2 ? "quarter" : "check";
   }
 
-  // random
-  if (rankValue >= 1000) return roll < 0.5 ? "max" : "half";
-  if (rankValue >= 900) return roll < 0.5 ? "half" : "quarter";
-  if (rankValue >= 806) return roll < 0.5 ? "quarter" : "check";
-  if (rankValue >= 105) return roll < 0.25 ? "quarter" : "check";
-  return roll < 0.15 ? "quarter" : "check";
+  // conservative: 1) 강패에서만 공격적으로 배팅
+  if (rankValue >= 1000) return roll < 0.2 ? "half" : "check";
+  if (rankValue >= 900) return roll < 0.15 ? "quarter" : "check";
+  if (rankValue >= 806) return roll < 0.1 ? "quarter" : "check";
+  if (rankValue >= 105) return roll < 0.05 ? "quarter" : "check";
+  return "check";
 }
 
 async function settleShowdown(game) {
@@ -357,10 +396,11 @@ async function renderActive(interaction, game) {
   await interaction.update(payload);
 }
 
-export async function applyAiTurn(game, games) {
+export async function applyAiTurn(game, games, interaction) {
   const balances = await getBalances(game);
   const aiAction = decideAiAction(game);
   const aiResult = processBetAction(game, "AI", aiAction, balances);
+  await sendActionNotice(interaction, game, "AI", aiAction, aiResult.required);
 
   if (aiResult.endType) {
     let outcome = null;
@@ -640,6 +680,13 @@ export async function handleButton(
       }
 
       const required = result.required ?? 0;
+      await sendActionNotice(
+        interaction,
+        game,
+        interaction.user.id,
+        actionName,
+        required,
+      );
       if (required > 0 && interaction.user.id !== "AI") {
         await addBalance(interaction.user.id, -required);
         balances[interaction.user.id] -= required;
@@ -689,7 +736,7 @@ export async function handleButton(
       }
 
       if (game.botId && game.turnId === "AI") {
-        const aiTurn = await applyAiTurn(game, games);
+        const aiTurn = await applyAiTurn(game, games, interaction);
         if (aiTurn.ended) {
           await interaction.update(aiTurn.payload);
           return;

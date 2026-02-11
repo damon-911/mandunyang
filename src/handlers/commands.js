@@ -296,7 +296,7 @@ export async function handleCommand(interaction, ctx) {
         setGameExpiry(games, gameId);
 
         if (game.turnId === "AI") {
-          const aiTurn = await applyAiTurn(game, games);
+          const aiTurn = await applyAiTurn(game, games, interaction);
           await interaction.editReply(aiTurn.payload);
           return;
         }
