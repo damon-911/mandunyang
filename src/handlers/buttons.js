@@ -77,6 +77,16 @@ async function sendActionNotice(channel, game, actorId, action, amount) {
   } catch { }
 }
 
+async function scheduleThreadCleanup(channel, delayMs = 10_000) {
+  if (!channel || !channel.isThread?.()) return;
+  try {
+    await channel.send("⏰ 10초 후 섯다방이 정리됩니다.");
+    setTimeout(() => {
+      channel.delete("Seotda game ended").catch(() => { });
+    }, delayMs);
+  } catch { }
+}
+
 function addBalancesToPayload(payload, game, balances) {
   const lines = Object.values(game.players)
     .filter((p) => p.id !== "AI")
@@ -95,13 +105,18 @@ function refreshGameExpiry(game, games, ms = 5 * 60 * 1000) {
     if (g && !g.ended) {
       games.delete(game.id);
       g.lastTimeoutNoticeAt = Date.now();
-      g._timeoutNoticeChannel?.send(
-        "⏰ 게임이 종료되어 판돈이 소멸되었습니다.",
-      ).then((msg) => {
-        setTimeout(() => {
-          msg.delete().catch(() => {});
-        }, 5000);
-      }).catch(() => {});
+      g._timeoutNoticeChannel
+        ?.send("⏰ 게임이 종료되어 판돈이 소멸되었습니다.")
+        .then(() => {
+          if (g._timeoutNoticeChannel?.isThread?.()) {
+            setTimeout(() => {
+              g._timeoutNoticeChannel
+                ?.delete("Seotda game timed out")
+                .catch(() => { });
+            }, 10_000);
+          }
+        })
+        .catch(() => { });
     }
   }, ms);
 }
@@ -460,6 +475,7 @@ export async function applyAiTurn(game, games, noticeChannel) {
     await addBalancesToResult(payload, game);
     game.ended = true;
     games.delete(game.id);
+    await scheduleThreadCleanup(noticeChannel);
     return { ended: true, payload };
   }
 
@@ -553,6 +569,7 @@ export async function handleButton(
           ],
           components: [],
         });
+        await scheduleThreadCleanup(interaction.channel);
         return;
       }
 
@@ -599,6 +616,7 @@ export async function handleButton(
         ],
         components: [],
       });
+      await scheduleThreadCleanup(interaction.channel);
       return;
     }
 
@@ -748,6 +766,7 @@ export async function handleButton(
         game.ended = true;
         games.delete(gameId);
         await interaction.update(payload);
+        await scheduleThreadCleanup(interaction.channel);
         return;
       }
 

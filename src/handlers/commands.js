@@ -116,13 +116,18 @@ function setGameExpiry(games, game, ms = 5 * 60 * 1000) {
     if (g && !g.ended) {
       games.delete(game.id);
       g.lastTimeoutNoticeAt = Date.now();
-      g._timeoutNoticeChannel?.send(
-        "⏰ 게임이 종료되어 판돈이 소멸되었습니다.",
-      ).then((msg) => {
-        setTimeout(() => {
-          msg.delete().catch(() => {});
-        }, 5000);
-      }).catch(() => {});
+      g._timeoutNoticeChannel
+        ?.send("⏰ 게임이 종료되어 판돈이 소멸되었습니다.")
+        .then(() => {
+          if (g._timeoutNoticeChannel?.isThread?.()) {
+            setTimeout(() => {
+              g._timeoutNoticeChannel
+                ?.delete("Seotda game timed out")
+                .catch(() => { });
+            }, 10_000);
+          }
+        })
+        .catch(() => { });
     }
   }, ms);
 }
@@ -157,7 +162,7 @@ async function ensureGameChannel(interaction, gameId, opponent) {
         .send(
           `😺 만두냥이 섯다방을 열었어! 여기로 이동해줘: <#${thread.id}>`,
         )
-        .catch(() => {});
+        .catch(() => { });
     }
     return thread;
   } catch {
@@ -173,7 +178,7 @@ export async function handleCommand(interaction, ctx) {
     if (payload?.ephemeral) {
       setTimeout(() => {
         if (interaction.deferred || interaction.replied) {
-          interaction.deleteReply().catch(() => {});
+          interaction.deleteReply().catch(() => { });
         }
       }, 5000);
     }
