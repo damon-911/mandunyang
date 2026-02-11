@@ -89,6 +89,14 @@ function addBalancesToPayload(payload, game, balances) {
   });
 }
 
+function refreshGameExpiry(game, games, ms = 5 * 60 * 1000) {
+  if (game.expireTimer) clearTimeout(game.expireTimer);
+  game.expireTimer = setTimeout(() => {
+    const g = games.get(game.id);
+    if (g && !g.ended) games.delete(game.id);
+  }, ms);
+}
+
 async function getBalances(game) {
   const ids = Object.keys(game.players).filter((id) => id !== "AI");
   const rows = await Promise.all(
@@ -388,7 +396,8 @@ async function addBalancesToResult(payload, game) {
   });
 }
 
-async function renderActive(interaction, game) {
+async function renderActive(interaction, game, games) {
+  refreshGameExpiry(game, games);
   const balances = await getBalances(game);
   const payload = buildActiveGameMessage(game);
   addBalancesToPayload(payload, game, balances);
@@ -439,6 +448,7 @@ export async function applyAiTurn(game, games, interaction) {
     return { ended: true, payload };
   }
 
+  refreshGameExpiry(game, games);
   const payload = buildActiveGameMessage(game);
   addBalancesToPayload(payload, game, balances);
   payload.components = buildBettingComponents(game, balances);
@@ -540,7 +550,7 @@ export async function handleButton(
       startGame(game, game.challengerId, game.opponentId);
       games.set(gameId, game);
 
-      await renderActive(interaction, game);
+      await renderActive(interaction, game, games);
       return;
     }
 
@@ -597,6 +607,7 @@ export async function handleButton(
       }
 
       player.checked = true;
+      refreshGameExpiry(game, games);
 
       await safeReply(interaction, {
         ephemeral: true,
@@ -641,16 +652,6 @@ export async function handleButton(
         await safeErrorReply(interaction, {
           ephemeral: true,
           embeds: [errorEmbed("잘못된 요청", "알 수 없는 베팅 동작이야!")],
-        });
-        return;
-      }
-
-      if (game.botId && ["call", "die"].includes(actionName)) {
-        await safeErrorReply(interaction, {
-          ephemeral: true,
-          embeds: [
-            errorEmbed("동작 불가", "AI전에서는 체크/쿼터/하프/올인만 가능해!"),
-          ],
         });
         return;
       }
@@ -743,7 +744,7 @@ export async function handleButton(
         }
       }
 
-      await renderActive(interaction, game);
+      await renderActive(interaction, game, games);
       return;
     }
 

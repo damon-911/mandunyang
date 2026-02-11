@@ -109,10 +109,11 @@ function buildInitialBettingComponents(game, balance) {
   return [row1, row2, row3];
 }
 
-function setGameExpiry(games, gameId, ms = 10 * 60 * 1000) {
-  setTimeout(() => {
-    const g = games.get(gameId);
-    if (g && !g.ended) games.delete(gameId);
+function setGameExpiry(games, game, ms = 5 * 60 * 1000) {
+  if (game.expireTimer) clearTimeout(game.expireTimer);
+  game.expireTimer = setTimeout(() => {
+    const g = games.get(game.id);
+    if (g && !g.ended) games.delete(game.id);
   }, ms);
 }
 
@@ -293,7 +294,7 @@ export async function handleCommand(interaction, ctx) {
         game.pot = baseAmount * 2;
         startGame(game, userId, "AI");
         games.set(gameId, game);
-        setGameExpiry(games, gameId);
+        setGameExpiry(games, game);
 
         if (game.turnId === "AI") {
           const aiTurn = await applyAiTurn(game, games, interaction);
@@ -315,7 +316,7 @@ export async function handleCommand(interaction, ctx) {
 
       // 1:1이면 수락 대기
       games.set(gameId, game);
-      setGameExpiry(games, gameId);
+      setGameExpiry(games, game);
 
       await interaction.editReply(buildPendingMessage(game));
       return;
