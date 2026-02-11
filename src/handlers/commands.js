@@ -113,7 +113,17 @@ function setGameExpiry(games, game, ms = 5 * 60 * 1000) {
   if (game.expireTimer) clearTimeout(game.expireTimer);
   game.expireTimer = setTimeout(() => {
     const g = games.get(game.id);
-    if (g && !g.ended) games.delete(game.id);
+    if (g && !g.ended) {
+      games.delete(game.id);
+      g.lastTimeoutNoticeAt = Date.now();
+      g._timeoutNoticeChannel?.send(
+        "⏰ 게임이 종료되어 판돈이 소멸되었습니다.",
+      ).then((msg) => {
+        setTimeout(() => {
+          msg.delete().catch(() => {});
+        }, 5000);
+      }).catch(() => {});
+    }
   }, ms);
 }
 
@@ -290,6 +300,7 @@ export async function handleCommand(interaction, ctx) {
       // 솔로면 즉시 시작
       if (!opponent) {
         game.botUserId = interaction.client.user?.id ?? null;
+        game._timeoutNoticeChannel = interaction.channel;
         await addBalance(userId, -baseAmount);
         game.pot = baseAmount * 2;
         startGame(game, userId, "AI");
@@ -316,6 +327,7 @@ export async function handleCommand(interaction, ctx) {
 
       // 1:1이면 수락 대기
       games.set(gameId, game);
+      game._timeoutNoticeChannel = interaction.channel;
       setGameExpiry(games, game);
 
       await interaction.editReply(buildPendingMessage(game));

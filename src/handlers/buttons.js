@@ -33,7 +33,7 @@ async function safeErrorReply(interaction, payload, ttlMs = 5000) {
   if (payload?.ephemeral) {
     setTimeout(() => {
       if (interaction.deferred || interaction.replied) {
-        interaction.deleteReply().catch(() => {});
+        interaction.deleteReply().catch(() => { });
       }
     }, ttlMs);
   }
@@ -70,12 +70,12 @@ async function sendActionNotice(interaction, game, actorId, action, amount) {
 
   try {
     const msg = await channel.send(
-      `ℹ️ ${actorLabel} · ${actionLabel}${amountText}`,
+      `ℹ️ ${actorLabel} - ${actionLabel}${amountText}`,
     );
     setTimeout(() => {
-      msg.delete().catch(() => {});
+      msg.delete().catch(() => { });
     }, 5000);
-  } catch {}
+  } catch { }
 }
 
 function addBalancesToPayload(payload, game, balances) {
@@ -93,7 +93,17 @@ function refreshGameExpiry(game, games, ms = 5 * 60 * 1000) {
   if (game.expireTimer) clearTimeout(game.expireTimer);
   game.expireTimer = setTimeout(() => {
     const g = games.get(game.id);
-    if (g && !g.ended) games.delete(game.id);
+    if (g && !g.ended) {
+      games.delete(game.id);
+      g.lastTimeoutNoticeAt = Date.now();
+      g._timeoutNoticeChannel?.send(
+        "⏰ 게임이 종료되어 판돈이 소멸되었습니다.",
+      ).then((msg) => {
+        setTimeout(() => {
+          msg.delete().catch(() => {});
+        }, 5000);
+      }).catch(() => {});
+    }
   }, ms);
 }
 
@@ -496,9 +506,9 @@ export async function handleButton(
       });
       setTimeout(() => {
         if (interaction.deferred || interaction.replied) {
-          interaction.deleteReply().catch(() => {});
+          interaction.deleteReply().catch(() => { });
         }
-      }, 10_000);
+      }, 5000);
       return;
     }
 
@@ -615,9 +625,9 @@ export async function handleButton(
       });
       setTimeout(() => {
         if (interaction.deferred || interaction.replied) {
-          interaction.deleteReply().catch(() => {});
+          interaction.deleteReply().catch(() => { });
         }
-      }, 10_000);
+      }, 5000);
       return;
     }
 
