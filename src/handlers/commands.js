@@ -135,6 +135,36 @@ function hasActiveGame(games, userId) {
   return false;
 }
 
+async function ensureGameChannel(interaction, gameId, opponent) {
+  const baseChannel = interaction.channel;
+  if (!baseChannel) return null;
+  if (baseChannel.isThread?.()) return baseChannel;
+
+  const canCreateThread = typeof baseChannel.threads?.create === "function";
+  if (!canCreateThread) return baseChannel;
+
+  const p1 = interaction.user.username;
+  const p2 = opponent?.username ?? "만두냥";
+  const safeName = `🎴 만두냥 섯다방 (${p1} vs ${p2})`.slice(0, 90);
+  try {
+    const thread = await baseChannel.threads.create({
+      name: safeName,
+      autoArchiveDuration: 60,
+      reason: "Seotda game",
+    });
+    if (opponent) {
+      baseChannel
+        .send(
+          `😺 만두냥이 섯다방을 열었어! 여기로 이동해줘: <#${thread.id}>`,
+        )
+        .catch(() => {});
+    }
+    return thread;
+  } catch {
+    return baseChannel;
+  }
+}
+
 export async function handleCommand(interaction, ctx) {
   const { games } = ctx;
 
@@ -286,7 +316,7 @@ export async function handleCommand(interaction, ctx) {
         return;
       }
 
-      await interaction.deferReply();
+      await interaction.deferReply({ ephemeral: true });
 
       const gameId = randomUUID();
       const game = createGame({
@@ -297,10 +327,23 @@ export async function handleCommand(interaction, ctx) {
       });
       game.baseAmount = baseAmount;
 
+      const gameChannel = await ensureGameChannel(
+        interaction,
+        gameId,
+        opponent,
+      );
+      if (!gameChannel) {
+        await interaction.editReply({
+          content: "채널 정보를 가져오지 못했어. 다시 시도해줘!",
+        });
+        return;
+      }
+      game.channelId = gameChannel.id;
+      game._timeoutNoticeChannel = gameChannel;
+
       // 솔로면 즉시 시작
       if (!opponent) {
         game.botUserId = interaction.client.user?.id ?? null;
-        game._timeoutNoticeChannel = interaction.channel;
         await addBalance(userId, -baseAmount);
         game.pot = baseAmount * 2;
         startGame(game, userId, "AI");
@@ -308,8 +351,19 @@ export async function handleCommand(interaction, ctx) {
         setGameExpiry(games, game);
 
         if (game.turnId === "AI") {
-          const aiTurn = await applyAiTurn(game, games, interaction);
-          await interaction.editReply(aiTurn.payload);
+          const aiTurn = await applyAiTurn(
+            game,
+            games,
+            game._timeoutNoticeChannel,
+          );
+          await gameChannel.send(aiTurn.payload);
+          if (gameChannel.id !== interaction.channelId) {
+            await interaction.editReply({
+              content: `😺 만두냥이 섯다방을 열었어! 여기로 이동해줘: <#${gameChannel.id}>`,
+            });
+          } else {
+            await interaction.editReply({ content: "게임을 시작했어!" });
+          }
           return;
         }
 
@@ -321,16 +375,29 @@ export async function handleCommand(interaction, ctx) {
           game,
           challengerBalance - baseAmount,
         );
-        await interaction.editReply(payload);
+        await gameChannel.send(payload);
+        if (gameChannel.id !== interaction.channelId) {
+          await interaction.editReply({
+            content: `😺 만두냥이 섯다방을 열었어! 여기로 이동해줘: <#${gameChannel.id}>`,
+          });
+        } else {
+          await interaction.editReply({ content: "게임을 시작했어!" });
+        }
         return;
       }
 
       // 1:1이면 수락 대기
       games.set(gameId, game);
-      game._timeoutNoticeChannel = interaction.channel;
       setGameExpiry(games, game);
 
-      await interaction.editReply(buildPendingMessage(game));
+      await gameChannel.send(buildPendingMessage(game));
+      if (gameChannel.id !== interaction.channelId) {
+        await interaction.editReply({
+          content: `😺 만두냥이 섯다방을 열었어! 여기로 이동해줘: <#${gameChannel.id}>`,
+        });
+      } else {
+        await interaction.editReply({ content: "대결 신청을 보냈어!" });
+      }
       return;
     }
 

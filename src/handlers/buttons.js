@@ -56,8 +56,7 @@ function formatActionLabel(action) {
   return labels[action] ?? action ?? "알 수 없음";
 }
 
-async function sendActionNotice(interaction, game, actorId, action, amount) {
-  const channel = interaction.channel;
+async function sendActionNotice(channel, game, actorId, action, amount) {
   if (!channel) return;
 
   const actorLabel =
@@ -415,11 +414,17 @@ async function renderActive(interaction, game, games) {
   await interaction.update(payload);
 }
 
-export async function applyAiTurn(game, games, interaction) {
+export async function applyAiTurn(game, games, noticeChannel) {
   const balances = await getBalances(game);
   const aiAction = decideAiAction(game);
   const aiResult = processBetAction(game, "AI", aiAction, balances);
-  await sendActionNotice(interaction, game, "AI", aiAction, aiResult.required);
+  await sendActionNotice(
+    noticeChannel,
+    game,
+    "AI",
+    aiAction,
+    aiResult.required,
+  );
 
   if (aiResult.endType) {
     let outcome = null;
@@ -692,7 +697,7 @@ export async function handleButton(
 
       const required = result.required ?? 0;
       await sendActionNotice(
-        interaction,
+        interaction.channel,
         game,
         interaction.user.id,
         actionName,
@@ -747,7 +752,7 @@ export async function handleButton(
       }
 
       if (game.botId && game.turnId === "AI") {
-        const aiTurn = await applyAiTurn(game, games, interaction);
+        const aiTurn = await applyAiTurn(game, games, interaction.channel);
         if (aiTurn.ended) {
           await interaction.update(aiTurn.payload);
           return;
