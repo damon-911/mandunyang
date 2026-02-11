@@ -80,7 +80,14 @@ async function sendActionNotice(channel, game, actorId, action, amount) {
 async function scheduleThreadCleanup(channel, delayMs = 10_000) {
   if (!channel || !channel.isThread?.()) return;
   try {
-    await channel.send("⏰ 10초 후 섯다방이 정리됩니다.");
+    await channel.send({
+      embeds: [
+        infoEmbed(
+          "섯다방 정리 안내",
+          "😺 만두냥이 10초 뒤 섯다방을 정리할게!",
+        ),
+      ],
+    });
     setTimeout(() => {
       channel.delete("Seotda game ended").catch(() => { });
     }, delayMs);
