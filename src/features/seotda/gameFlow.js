@@ -18,6 +18,11 @@ function getBotLabel(game) {
   return game.botUserId ? `<@${game.botUserId}>` : "만두냥";
 }
 
+function pickAiStyle() {
+  const styles = ["conservative", "aggressive", "random"];
+  return styles[Math.floor(Math.random() * styles.length)];
+}
+
 function formatActionLabel(action) {
   const labels = {
     check: "체크",
@@ -62,6 +67,7 @@ export function createGame({ id, channelId, challengerId, opponentId }) {
     lastBetBy: null,
     checksInRow: 0,
     turnId: challengerId,
+    aiStyle: null,
   };
 }
 
@@ -116,7 +122,9 @@ export function startGame(game, p1Id, opponentUserIdOrAI) {
         checked: true,
       },
     };
-    game.turnId = p1Id;
+    game.aiStyle = pickAiStyle();
+    const ids = [p1Id, "AI"];
+    game.turnId = ids[Math.floor(Math.random() * ids.length)];
   }
 
   game.state = "active";

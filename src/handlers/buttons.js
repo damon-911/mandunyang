@@ -196,47 +196,6 @@ function buildBettingComponents(game, balances) {
     maxAmount >= callAmount;
   const canDie = game.currentBet > 0;
 
-  if (game.botId) {
-    const row1 = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`seotda_check:${game.id}`)
-        .setLabel("패 확인")
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId(`seotda_rules:${game.id}`)
-        .setLabel("족보")
-        .setStyle(ButtonStyle.Secondary),
-    );
-
-    const row2 = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`seotda_bet:${game.id}:check`)
-        .setLabel("체크")
-        .setStyle(ButtonStyle.Secondary)
-        .setDisabled(disableAll || !canCheck),
-      new ButtonBuilder()
-        .setCustomId(`seotda_bet:${game.id}:quarter`)
-        .setLabel(`쿼터(${formatMoney(quarterAmount)})`)
-        .setStyle(ButtonStyle.Success)
-        .setDisabled(disableAll || !canQuarter),
-    );
-
-    const row3 = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`seotda_bet:${game.id}:half`)
-        .setLabel(`하프(${formatMoney(halfAmount)})`)
-        .setStyle(ButtonStyle.Success)
-        .setDisabled(disableAll || !canHalf),
-      new ButtonBuilder()
-        .setCustomId(`seotda_bet:${game.id}:max`)
-        .setLabel(`올인(${formatMoney(maxAmount)})`)
-        .setStyle(ButtonStyle.Danger)
-        .setDisabled(disableAll || !canMax),
-    );
-
-    return [row1, row2, row3];
-  }
-
   const row1 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`seotda_check:${game.id}`)
@@ -289,14 +248,58 @@ function buildBettingComponents(game, balances) {
 
 function decideAiAction(game) {
   const rankValue = game.players.AI?.rank?.value ?? 0;
+  const style = game.aiStyle ?? "random";
+  const roll = Math.random();
+
+  const aiFirstTurn = game.lastAction === null && game.turnId === "AI";
+
   if (game.currentBet > 0) {
-    return rankValue >= 900 || rankValue >= 806 ? "call" : "die";
+    if (style === "aggressive") {
+      if (rankValue >= 1000) return roll < 0.55 ? "max" : "half";
+      if (rankValue >= 900) return roll < 0.6 ? "half" : "call";
+      if (rankValue >= 806) return roll < 0.75 ? "call" : "quarter";
+      if (rankValue >= 105) return roll < 0.45 ? "call" : "die";
+      return aiFirstTurn ? "call" : "die";
+    }
+
+    if (style === "conservative") {
+      if (rankValue >= 1000) return roll < 0.35 ? "half" : "call";
+      if (rankValue >= 900) return roll < 0.5 ? "call" : "die";
+      if (rankValue >= 806) return roll < 0.35 ? "call" : "die";
+      if (rankValue >= 105) return roll < 0.15 ? "call" : "die";
+      return aiFirstTurn ? "call" : "die";
+    }
+
+    // random
+    if (rankValue >= 1000) return roll < 0.3 ? "max" : "call";
+    if (rankValue >= 900) return roll < 0.4 ? "half" : "call";
+    if (rankValue >= 806) return roll < 0.5 ? "call" : "die";
+    if (rankValue >= 105) return roll < 0.2 ? "call" : "die";
+    return aiFirstTurn ? "call" : "die";
   }
-  if (rankValue >= 1000) return "max";
-  if (rankValue >= 900) return "half";
-  if (rankValue >= 806) return "quarter";
-  if (rankValue >= 105) return "check";
-  return "check";
+
+  if (style === "aggressive") {
+    if (rankValue >= 1000) return roll < 0.75 ? "max" : "half";
+    if (rankValue >= 900) return roll < 0.7 ? "half" : "quarter";
+    if (rankValue >= 806) return roll < 0.7 ? "quarter" : "check";
+    if (rankValue >= 105) return roll < 0.4 ? "quarter" : "check";
+    return roll < 0.25 ? "quarter" : "check";
+  }
+
+  if (style === "conservative") {
+    if (rankValue >= 1000) return roll < 0.2 ? "half" : "check";
+    if (rankValue >= 900) return roll < 0.2 ? "quarter" : "check";
+    if (rankValue >= 806) return roll < 0.15 ? "quarter" : "check";
+    if (rankValue >= 105) return roll < 0.1 ? "quarter" : "check";
+    return "check";
+  }
+
+  // random
+  if (rankValue >= 1000) return roll < 0.5 ? "max" : "half";
+  if (rankValue >= 900) return roll < 0.5 ? "half" : "quarter";
+  if (rankValue >= 806) return roll < 0.5 ? "quarter" : "check";
+  if (rankValue >= 105) return roll < 0.25 ? "quarter" : "check";
+  return roll < 0.15 ? "quarter" : "check";
 }
 
 async function settleShowdown(game) {
@@ -352,6 +355,54 @@ async function renderActive(interaction, game) {
   addBalancesToPayload(payload, game, balances);
   payload.components = buildBettingComponents(game, balances);
   await interaction.update(payload);
+}
+
+export async function applyAiTurn(game, games) {
+  const balances = await getBalances(game);
+  const aiAction = decideAiAction(game);
+  const aiResult = processBetAction(game, "AI", aiAction, balances);
+
+  if (aiResult.endType) {
+    let outcome = null;
+    if (aiResult.endType === "showdown") {
+      outcome = await settleShowdown(game);
+    } else if (aiResult.endType === "die") {
+      outcome = await settleDie(game, aiResult.loserId);
+    }
+    const payload = buildResultUpdatePayload(game);
+    const resultLines = [];
+    if (aiResult.endType === "showdown" && outcome) {
+      if (outcome.result === "draw") {
+        resultLines.push("🤝 무승부");
+      } else if (outcome.result === "win" && outcome.winner && outcome.loser) {
+        resultLines.push(`🏆 승자: ${outcome.winner.label}`);
+        resultLines.push(`😿 패자: ${outcome.loser.label}`);
+      }
+    }
+    if (aiResult.endType === "die") {
+      if (outcome?.winnerId) {
+        const winnerLabel = game.players[outcome.winnerId]?.label ?? "승자";
+        resultLines.push(`🏆 승자: ${winnerLabel}`);
+        resultLines.push(`😿 패자: ${game.players.AI.label}`);
+      }
+    }
+    if (resultLines.length > 0) {
+      payload.embeds?.[0]?.addFields({
+        name: "결과",
+        value: resultLines.join("\n"),
+        inline: false,
+      });
+    }
+    await addBalancesToResult(payload, game);
+    game.ended = true;
+    games.delete(game.id);
+    return { ended: true, payload };
+  }
+
+  const payload = buildActiveGameMessage(game);
+  addBalancesToPayload(payload, game, balances);
+  payload.components = buildBettingComponents(game, balances);
+  return { ended: false, payload };
 }
 
 export async function handleButton(
@@ -574,65 +625,6 @@ export async function handleButton(
 
       const balances = await getBalances(game);
 
-      if (game.botId) {
-        const required =
-          actionName === "check"
-            ? 0
-            : game.currentBet > 0
-              ? game.currentBet + getRaiseAmount(game, actionName, balances)
-              : getRaiseAmount(game, actionName, balances);
-        if (required <= 0 && actionName !== "check") {
-          await safeErrorReply(interaction, {
-            ephemeral: true,
-            embeds: [errorEmbed("베팅 불가", "베팅 금액이 올바르지 않아!")],
-          });
-          return;
-        }
-        if (
-          actionName !== "check" &&
-          getBalanceForId(balances, interaction.user.id) < required
-        ) {
-          await safeErrorReply(interaction, {
-            ephemeral: true,
-            embeds: [
-              errorEmbed("잔액 부족", "보유금이 부족해서 베팅할 수 없어!"),
-            ],
-          });
-          return;
-        }
-        if (required > 0) {
-          await addBalance(interaction.user.id, -required);
-          game.pot += required;
-        }
-        game.lastAction = {
-          playerId: interaction.user.id,
-          action: actionName,
-          amount: required,
-        };
-
-        const outcome = await settleShowdown(game);
-        const payload = buildResultUpdatePayload(game);
-        const resultLines = [];
-        if (outcome?.result === "draw") {
-          resultLines.push("🤝 무승부");
-        } else if (outcome?.result === "win" && outcome.winner && outcome.loser) {
-          resultLines.push(`🏆 승자: ${outcome.winner.label}`);
-          resultLines.push(`😿 패자: ${outcome.loser.label}`);
-        }
-        if (resultLines.length > 0) {
-          payload.embeds?.[0]?.addFields({
-            name: "결과",
-            value: resultLines.join("\n"),
-            inline: false,
-          });
-        }
-        await addBalancesToResult(payload, game);
-        game.ended = true;
-        games.delete(gameId);
-        await interaction.update(payload);
-        return;
-      }
-
       const result = processBetAction(
         game,
         interaction.user.id,
@@ -697,49 +689,9 @@ export async function handleButton(
       }
 
       if (game.botId && game.turnId === "AI") {
-        const aiBalances = await getBalances(game);
-        const aiAction = decideAiAction(game);
-        const aiResult = processBetAction(game, "AI", aiAction, aiBalances);
-        if (aiResult.endType) {
-          let outcome = null;
-          if (aiResult.endType === "showdown") {
-            outcome = await settleShowdown(game);
-          } else if (aiResult.endType === "die") {
-            outcome = await settleDie(game, aiResult.loserId);
-          }
-          const payload = buildResultUpdatePayload(game);
-          const resultLines = [];
-          if (aiResult.endType === "showdown" && outcome) {
-            if (outcome.result === "draw") {
-              resultLines.push("🤝 무승부");
-            } else if (
-              outcome.result === "win" &&
-              outcome.winner &&
-              outcome.loser
-            ) {
-              resultLines.push(`🏆 승자: ${outcome.winner.label}`);
-              resultLines.push(`😿 패자: ${outcome.loser.label}`);
-            }
-          }
-          if (aiResult.endType === "die") {
-            if (outcome?.winnerId) {
-              const winnerLabel =
-                game.players[outcome.winnerId]?.label ?? "승자";
-              resultLines.push(`🏆 승자: ${winnerLabel}`);
-              resultLines.push(`😿 패자: ${game.players.AI.label}`);
-            }
-          }
-          if (resultLines.length > 0) {
-            payload.embeds?.[0]?.addFields({
-              name: "결과",
-              value: resultLines.join("\n"),
-              inline: false,
-            });
-          }
-          await addBalancesToResult(payload, game);
-          game.ended = true;
-          games.delete(gameId);
-          await interaction.update(payload);
+        const aiTurn = await applyAiTurn(game, games);
+        if (aiTurn.ended) {
+          await interaction.update(aiTurn.payload);
           return;
         }
       }
