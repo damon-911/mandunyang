@@ -68,6 +68,8 @@ export function startGame(game, p1Id, opponentUserIdOrAI) {
         checked: false,
       },
     };
+    const ids = [p1Id, opponentUserIdOrAI];
+    game.turnId = ids[Math.floor(Math.random() * ids.length)];
   } else {
     game.botId = "AI";
     game.players = {
@@ -88,13 +90,13 @@ export function startGame(game, p1Id, opponentUserIdOrAI) {
         checked: true,
       },
     };
+    game.turnId = p1Id;
   }
 
   game.state = "active";
   game.currentBet = 0;
   game.lastBetBy = null;
   game.checksInRow = 0;
-  game.turnId = p1Id;
 }
 
 export function buildPendingMessage(game) {
@@ -150,34 +152,30 @@ export function buildActiveGameMessage(game) {
         { name: "대결", value: vsText },
         { name: "기본금", value: baseText, inline: true },
         { name: "판돈", value: potText, inline: true },
-        ...(game.botId
-          ? []
-          : [
-              {
-                name: "차례",
-                value:
-                  game.turnId === "AI"
-                    ? getBotLabel(game)
-                    : getPlayerLabel(game.turnId),
-                inline: true,
-              },
-              {
-                name: "현재 베팅",
-                value:
-                  game.currentBet > 0
-                    ? `${game.currentBet.toLocaleString("ko-KR")}원`
-                    : "없음",
-                inline: true,
-              },
-              {
-                name: "진행 방법",
-                value:
-                  "• **체크**: 배팅 없이 넘기기\n" +
-                  "• **콜**: 상대 배팅과 동일하게 내기\n" +
-                  "• **쿼터/하프/맥스**: 판돈 기준 추가 배팅\n" +
-                  "• **다이**: 포기하고 판돈 양보",
-              },
-            ]),
+        {
+          name: "지금 차례",
+          value:
+            game.turnId === "AI"
+              ? getBotLabel(game)
+              : getPlayerLabel(game.turnId),
+          inline: true,
+        },
+        {
+          name: "현재 베팅",
+          value:
+            game.currentBet > 0
+              ? `${game.currentBet.toLocaleString("ko-KR")}원`
+              : "없음",
+          inline: true,
+        },
+        {
+          name: "진행 방법",
+          value:
+            "• **체크**: 배팅 없이 넘기기\n" +
+            "• **콜**: 상대 배팅과 동일하게 내기\n" +
+            "• **쿼터/하프/맥스**: 판돈 기준 추가 배팅\n" +
+            "• **다이**: 포기하고 판돈 양보",
+        },
       ]),
     ],
     components: [],
