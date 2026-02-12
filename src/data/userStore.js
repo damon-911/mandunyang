@@ -95,3 +95,61 @@ export async function attend(userId, kstDateStr = getKstDateStr(), reward = 0) {
 
   return res.rows[0];
 }
+
+export async function transferBalance(fromUserId, toUserId, amount) {
+  if (amount <= 0) throw new Error("amount must be positive");
+  if (fromUserId === toUserId) throw new Error("same user transfer is not allowed");
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    await client.query(
+      `INSERT INTO users (user_id)
+       VALUES ($1), ($2)
+       ON CONFLICT (user_id) DO NOTHING`,
+      [fromUserId, toUserId],
+    );
+
+    const debitRes = await client.query(
+      `
+      UPDATE users
+      SET balance = balance - $2,
+          updated_at = NOW()
+      WHERE user_id = $1
+        AND balance >= $2
+      RETURNING user_id, balance
+      `,
+      [fromUserId, amount],
+    );
+
+    if (debitRes.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return null;
+    }
+
+    const creditRes = await client.query(
+      `
+      UPDATE users
+      SET balance = balance + $2,
+          updated_at = NOW()
+      WHERE user_id = $1
+      RETURNING user_id, balance
+      `,
+      [toUserId, amount],
+    );
+
+    await client.query("COMMIT");
+
+    return {
+      from: debitRes.rows[0],
+      to: creditRes.rows[0],
+      amount,
+    };
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}

@@ -10,6 +10,7 @@ import {
   addBalance,
   canAttend,
   attend,
+  transferBalance,
 } from "../data/userStore.js";
 
 import {
@@ -240,6 +241,71 @@ export async function handleCommand(interaction, ctx) {
               name: "마지막 출석",
               value: lastAttendance ?? "없음",
               inline: false,
+            },
+          ]),
+        ],
+      });
+      return;
+    }
+
+    case "송금": {
+      const fromUserId = interaction.user.id;
+      const toUser = interaction.options.getUser("대상", true);
+      const amount = interaction.options.getInteger("금액", true);
+
+      if (toUser.id === fromUserId) {
+        await errorReply({
+          ephemeral: true,
+          embeds: [errorEmbed("송금 불가", "자기 자신에게는 송금할 수 없어!")],
+        });
+        return;
+      }
+
+      if (toUser.bot) {
+        await errorReply({
+          ephemeral: true,
+          embeds: [errorEmbed("송금 불가", "봇에게는 송금할 수 없어!")],
+        });
+        return;
+      }
+
+      if (amount < 1000) {
+        await errorReply({
+          ephemeral: true,
+          embeds: [errorEmbed("송금 불가", "송금은 최소 1,000원부터 가능해!")],
+        });
+        return;
+      }
+
+      const result = await transferBalance(fromUserId, toUser.id, amount);
+      if (!result) {
+        await errorReply({
+          ephemeral: true,
+          embeds: [errorEmbed("잔액 부족", "보유금이 부족해서 송금할 수 없어!")],
+        });
+        return;
+      }
+
+      await interaction.reply({
+        embeds: [
+          gameEmbed("💸 송금 완료", [
+            {
+              name: "송금",
+              value: `<@${fromUserId}> → <@${toUser.id}>`,
+            },
+            {
+              name: "금액",
+              value: `${formatMoney(amount)}원`,
+            },
+            {
+              name: "내 잔액",
+              value: `${formatMoney(result.from.balance)}원`,
+              inline: true,
+            },
+            {
+              name: "상대 잔액",
+              value: `${formatMoney(result.to.balance)}원`,
+              inline: true,
             },
           ]),
         ],

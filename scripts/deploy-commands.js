@@ -31,6 +31,24 @@ const commands = [
     .toJSON(),
 
   new SlashCommandBuilder()
+    .setName("송금")
+    .setDescription("다른 사용자에게 게임머니를 송금")
+    .addUserOption((opt) =>
+      opt
+        .setName("대상")
+        .setDescription("송금할 사용자")
+        .setRequired(true),
+    )
+    .addIntegerOption((opt) =>
+      opt
+        .setName("금액")
+        .setDescription("송금 금액 (최소 1,000원)")
+        .setMinValue(1000)
+        .setRequired(true),
+    )
+    .toJSON(),
+
+  new SlashCommandBuilder()
     .setName("족보")
     .setDescription("섯다 족보 보기")
     .toJSON(),
