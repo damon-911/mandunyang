@@ -318,14 +318,14 @@ export async function handleCommand(interaction, ctx) {
     case "순위": {
       const scope = interaction.options.getString("기준") ?? "server";
       const LIMIT = 10;
+      await interaction.deferReply();
 
       let rows = [];
       if (scope === "global") {
         rows = await getTopBalances(LIMIT);
       } else {
         if (!interaction.guild) {
-          await errorReply({
-            ephemeral: true,
+          await interaction.editReply({
             embeds: [errorEmbed("순위 조회 불가", "서버 안에서만 조회할 수 있어!")],
           });
           return;
@@ -342,8 +342,7 @@ export async function handleCommand(interaction, ctx) {
       }
 
       if (rows.length === 0) {
-        await interaction.reply({
-          ephemeral: true,
+        await interaction.editReply({
           embeds: [
             infoEmbed(
               "순위",
@@ -363,7 +362,7 @@ export async function handleCommand(interaction, ctx) {
         )
         .join("\n");
 
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [
           gameEmbed("보유금 순위", [
             {
