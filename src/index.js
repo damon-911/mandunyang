@@ -5,7 +5,7 @@ import { handleCommand } from "./handlers/commands.js";
 import { handleButton } from "./handlers/buttons.js";
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds],
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
 });
 
 // gameId -> game (메모리 저장)
