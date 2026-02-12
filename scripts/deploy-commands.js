@@ -34,10 +34,7 @@ const commands = [
     .setName("송금")
     .setDescription("다른 사용자에게 게임머니를 송금")
     .addUserOption((opt) =>
-      opt
-        .setName("대상")
-        .setDescription("송금할 사용자")
-        .setRequired(true),
+      opt.setName("대상").setDescription("송금할 사용자").setRequired(true),
     )
     .addIntegerOption((opt) =>
       opt
@@ -45,6 +42,21 @@ const commands = [
         .setDescription("송금 금액 (최소 1,000원)")
         .setMinValue(1000)
         .setRequired(true),
+    )
+    .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("순위")
+    .setDescription("보유금 순위 확인")
+    .addStringOption((opt) =>
+      opt
+        .setName("기준")
+        .setDescription("순위 기준")
+        .addChoices(
+          { name: "서버", value: "server" },
+          { name: "전체", value: "global" },
+        )
+        .setRequired(false),
     )
     .toJSON(),
 

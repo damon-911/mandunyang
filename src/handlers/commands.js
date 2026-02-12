@@ -11,6 +11,8 @@ import {
   canAttend,
   attend,
   transferBalance,
+  getTopBalances,
+  getTopBalancesInUsers,
 } from "../data/userStore.js";
 
 import {
@@ -306,6 +308,72 @@ export async function handleCommand(interaction, ctx) {
               name: "상대 잔액",
               value: `${formatMoney(result.to.balance)}원`,
               inline: true,
+            },
+          ]),
+        ],
+      });
+      return;
+    }
+
+    case "순위": {
+      const scope = interaction.options.getString("기준") ?? "server";
+      const LIMIT = 10;
+
+      let rows = [];
+      if (scope === "global") {
+        rows = await getTopBalances(LIMIT);
+      } else {
+        if (!interaction.guild) {
+          await errorReply({
+            ephemeral: true,
+            embeds: [errorEmbed("순위 조회 불가", "서버 안에서만 조회할 수 있어!")],
+          });
+          return;
+        }
+
+        let memberIds = [];
+        try {
+          const members = await interaction.guild.members.fetch();
+          memberIds = [...members.keys()];
+        } catch {
+          memberIds = [...interaction.guild.members.cache.keys()];
+        }
+        rows = await getTopBalancesInUsers(memberIds, LIMIT);
+      }
+
+      if (rows.length === 0) {
+        await interaction.reply({
+          ephemeral: true,
+          embeds: [
+            infoEmbed(
+              "순위",
+              scope === "global"
+                ? "등록된 유저 데이터가 아직 없어."
+                : "이 서버에서 순위를 표시할 유저 데이터가 없어.",
+            ),
+          ],
+        });
+        return;
+      }
+
+      const rankingText = rows
+        .map(
+          (row, i) =>
+            `${i + 1}. <@${row.user_id}> - ${formatMoney(row.balance)}원`,
+        )
+        .join("\n");
+
+      await interaction.reply({
+        embeds: [
+          gameEmbed("보유금 순위", [
+            {
+              name: "기준",
+              value: scope === "global" ? "전체" : "서버",
+              inline: true,
+            },
+            {
+              name: "TOP 10",
+              value: rankingText,
             },
           ]),
         ],

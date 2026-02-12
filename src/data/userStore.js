@@ -153,3 +153,31 @@ export async function transferBalance(fromUserId, toUserId, amount) {
     client.release();
   }
 }
+
+export async function getTopBalances(limit = 10) {
+  const res = await pool.query(
+    `
+    SELECT user_id, balance
+    FROM users
+    ORDER BY balance DESC, user_id ASC
+    LIMIT $1
+    `,
+    [limit],
+  );
+  return res.rows;
+}
+
+export async function getTopBalancesInUsers(userIds, limit = 10) {
+  if (!Array.isArray(userIds) || userIds.length === 0) return [];
+  const res = await pool.query(
+    `
+    SELECT user_id, balance
+    FROM users
+    WHERE user_id = ANY($1::text[])
+    ORDER BY balance DESC, user_id ASC
+    LIMIT $2
+    `,
+    [userIds, limit],
+  );
+  return res.rows;
+}
